@@ -3,13 +3,16 @@
 // @namespace   splopi
 // @description Getts sell value from recons
 // @include     https://ruinsofchaos.com/inteldetail.php*
+// @include     https://ruinsofchaos.com/stats.php*
 // @version     1
 // @grant       none
 // ==/UserScript==
 
-//This is a self executing anonymous function, 
-//Used because it is easy to stop its execution whenever just by using return
-(function(){
+//Call this function if the intel page
+/**
+ * This function will gather inforamtion about the user's weapons and stores the SOV in a cookie
+**/
+function inteldetail(){
 
 	/*
 	* This grabs the first part of the page that inculdes information about the report
@@ -96,8 +99,33 @@
   //close the script if we did not find the Weapons table
   if(weaponsObj === false){
     return;
+  }
+  
+  console.log("Intel scan completed");
+}
+
+//Call this function if in the stats page
+/**
+ * This will function will add the sell off value on the user page
+ * If no value is found, a text will appear asking to recon
+**/
+function stats (){
+  console.log("Stats report completed");
+}
+
+//This is a self executing anonymous function, 
+//Used because it is easy to stop its execution whenever just by using return
+(function(){
+  //Get page URL 
+  var pageURL = window.location.href ;
+ 
+  //Check which function to call.
+  if(pageURL.match(/stats\.php/)){
+    stats();
+  }else if(pageURL.match(/inteldetail\.php/)){
+    inteldetail();
   }else{
-    console.log("Found weapons table");
+   console.log("Page not currently supported"); 
   }
   
 })()
