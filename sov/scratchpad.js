@@ -119,6 +119,10 @@
     //The structure is as follow, Table > tablebody > rows > cells. Also skip the first 2 elemnts since they are headers.
     //gt is zero based, gt(0) will skip the first, gt(1) will skip the first 2
     var weaponRows = weaponsObj.children().children(":gt(1)");
+    //Get the first row for the title, we will use that later to output our sell off value
+    var titleRow = weaponsObj.children().children(":nth-child(1)");
+    //Get the titleCell
+    titleCell = $(titleRow.children()[0]);
 
     //Looping over all the rows, each row is a description of a weapon held by user
     weaponRows.each(function(){
@@ -135,7 +139,8 @@
       //Keep in mind that the value can be "???" we need to account for that. I used ternary  operator here
       name = (name === "???") ? "???" : name.match(/>(.*)<\/a>/)[1];
       var type = $(weaponCells[1]).html();
-      var quantity = $(weaponCells[2]).html();
+      //Remove the comma from the quantity and transform the string to an integer
+      var quantity = ($(weaponCells[2]).html() === "???") ? "???" : parseInt($(weaponCells[2]).html().replace(/,/ , "")) ;
       var curStrength = $(weaponCells[3]).html();
       //Splitting the curStrength to get the current damage and the max strength
       //The max strength will help us determin the sell value of the item even if we are lacking information
@@ -155,9 +160,10 @@
       cesov += getSellValueOf(wep);
 
       //Add that object to the weapon array
-      weaponsArray.push(wep);
+      //weaponsArray.push(wep);
     });
-    console.log(weaponsArray);
+    
+    titleCell.html(titleCell.html() + ". Estimated SOV " + cesov.toLocaleString());
   }
 
   //Call this function if in the stats page
@@ -166,17 +172,23 @@
    * If no value is found, a text will appear asking to recon
   **/
   function stats (){
-    console.log("Stats report completed");
+    //console.log("Stats report completed");
   }
 
   //This function calculates the sell value of weapons passed. Will return a value of zero in the case the weapon cannot be indentidfied
   function getSellValueOf(wepObj){
     //We need to iterate 
-    if(1){
-
+    var value = 0;
+    if(wepObj.quantity !== "???"){
+      //Only attempt to calculate the value if we know the auantity
+      if (wepObj.name !== "???"){
+        value = nameToPriceMap[wepObj.name] * wepObj.quantity;
+      } else{
+        //If we do not know the name, we can still calcualte the value using the strength and type combination
+      }
     }
 
-    return 0;
+    return value;
   }
 
 
