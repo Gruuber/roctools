@@ -4,7 +4,7 @@
 // @description Getts sell value from recons
 // @include     https://ruinsofchaos.com/inteldetail.php*
 // @include     https://ruinsofchaos.com/stats.php*
-// @version     2
+// @version     2.01
 // @grant       none
 // ==/UserScript==
 //This is a self executing anonymous function, 
@@ -15,11 +15,11 @@
   var nameToPriceMap = {
     'Dagger': 800,
     'Maul': 12000,
-    'Blade': 16000,
+    'Blade': 160000,
     'Excalibur': 800000,
     'Sai': 800,
     'Shield': 12000,
-    'Mithril': 16000,
+    'Mithril': 160000,
     'Dragonskin': 800000,
     'Cloak': 40000,
     'Hook': 80000,
