@@ -4,7 +4,7 @@
 // @description Getts sell value from recons
 // @include     https://ruinsofchaos.com/inteldetail.php*
 // @include     https://ruinsofchaos.com/stats.php*
-// @version     2.01
+// @version     2.02
 // @grant       none
 // ==/UserScript==
 //This is a self executing anonymous function, 
@@ -147,7 +147,7 @@
       name = (name === '???') ? '???' : name.match(/>(.*)<\/a>/) [1];
       var type = $(weaponCells[1]).html();
       //Remove the comma from the quantity and transform the string to an integer
-      var quantity = ($(weaponCells[2]).html() === '???') ? '???' : parseInt($(weaponCells[2]).html().replace(/,/, ''));
+      var quantity = ($(weaponCells[2]).html() === '???') ? '???' : parseInt($(weaponCells[2]).html().replaceAll(',', ''));
       var curStrength = $(weaponCells[3]).html();
       //Splitting the curStrength to get the current damage and the max strength
       //The max strength will help us determin the sell value of the item even if we are lacking information
@@ -339,6 +339,11 @@
     createCookie(name, '', - 1);
   }  //Get page URL 
   
+  
+  String.prototype.replaceAll = function(search, replacement) {
+    var target = this;
+    return target.split(search).join(replacement);
+  };
   
   //The following will just call the correct function based on the page name
   var pageURL = window.location.href;
