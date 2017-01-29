@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/maxdoumit/roctools/model"
 )
 
 var store = sessions.NewCookieStore([]byte("mywishisyourcommand"))
@@ -28,19 +30,9 @@ func main() {
 
 // [START func_sign]
 func sign(w http.ResponseWriter, r *http.Request) {
-	print("Sign")
-	db, err = sql.Open("mysql", "gouser:hireme@tcp(127.0.0.1:3306)/splop")
-	if err != nil {
-		panic(err.Error())
-	}
-	// sql.DB should be long lived "defer" closes it once this function ends
+	db = getDBconnection()
+	//Close database connection at the end
 	defer db.Close()
-
-	// Test the connection to the database
-	err = db.Ping()
-	if err != nil {
-		panic(err.Error())
-	}
 
 	r.ParseForm() //Parse url parameters passed, then parse the response packet for the POST body (request body)
 	// attention: If you do not call ParseForm method, the following data can not be obtained form
@@ -127,31 +119,51 @@ func getprofile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.Values["typeID"] == 4 {
-		fmt.Fprintf(w, "%s", "4")
+		//First get all non admin non bold_ally users;
+		allNonAdminUsers := getAllNonAdminUsers()
+		userValue := model.AdminMessage{Logged: true, Type: "<span style=\"color:#0066FF\">Don't tell anyone that I like you the most (bold_ally)</span>", TypeID: 4, UserEntries: *allNonAdminUsers}
+		js, err := json.Marshal(userValue)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 	} else if session.Values["typeID"] == 3 {
-		fmt.Fprintf(w, "%s", "3")
+		userValue := model.UserMessage{Logged: true, Type: "Approved", TypeID: 3}
+		js, err := json.Marshal(userValue)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 	} else if session.Values["typeID"] == 2 {
-		resp := userMessage{Logged: true, Type: "Pending approval"}
-		fmt.Fprintf(w, resp)
+		userValue := model.UserMessage{Logged: true, Type: "Pending approval", TypeID: 2}
+		js, err := json.Marshal(userValue)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 	} else if session.Values["typeID"] == 1 {
-		fmt.Fprintf(w, "%s", "1")
+		userValue := model.UserMessage{Logged: true, Type: "<span style=\"color:#00FFFF\">Self praise is best praise</span>", TypeID: 1}
+		js, err := json.Marshal(userValue)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 	}
 
 }
 
 func login(w http.ResponseWriter, r *http.Request, password string, externalID string) {
-	db, err = sql.Open("mysql", "gouser:hireme@tcp(127.0.0.1:3306)/splop")
-	if err != nil {
-		panic(err.Error())
-	}
-	// sql.DB should be long lived "defer" closes it once this function ends
+	db = getDBconnection()
+	//Close database connection at the end
 	defer db.Close()
-
-	// Test the connection to the database
-	err = db.Ping()
-	if err != nil {
-		panic(err.Error())
-	}
 
 	stmt, err := db.Prepare("SELECT external_id  , password , type_id FROM users WHERE external_id=(?)")
 	if err != nil {
@@ -196,4 +208,55 @@ func createSession(w http.ResponseWriter, r *http.Request, externalID string, ty
 	session.Values["typeID"] = typeID
 	// Save it before we write to the response/return from the handler.
 	session.Save(r, w)
+}
+
+func getAllNonAdminUsers() *[]model.UserEntry {
+	var count int = 0
+	db = getDBconnection()
+	//Close database connection at the end
+	defer db.Close()
+
+	rows, err := db.Query("SELECT COUNT(DISTINCT  external_id) as `count` FROM users WHERE type_id=2 OR type_id=3")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&count)
+	}
+
+	userEntries := make([]model.UserEntry, count)
+
+	rows, err = db.Query("SELECT external_id  , username , challenge , type_id FROM users WHERE type_id=2 OR type_id=3")
+	if err != nil {
+		panic(err.Error())
+	}
+	counter := 0
+	for rows.Next() {
+		var externalID int
+		var username string
+		var challenge string
+		var typeID int
+		err = rows.Scan(&externalID, &username, &challenge, &typeID)
+		userEntries[counter] = model.UserEntry{ExternalID: externalID, Username: username, Challenge: challenge, TypeID: typeID}
+		counter++
+	}
+
+	return &userEntries
+}
+
+func getDBconnection() *sql.DB {
+	database, err := sql.Open("mysql", "gouser:hireme@tcp(127.0.0.1:3306)/splop")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// Test the connection to the database
+	err = database.Ping()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return database
 }
