@@ -45,7 +45,7 @@
     addMenuPages();
   }
   
-  var bbScriptServer = "http://127.0.0.1:8080";
+  var bbScriptServer = "http://52.10.254.235:8080";
   var scriptName = "Baldy Beaver";
   var url = document.location.toString();
   var BB_version = 1;
@@ -182,9 +182,26 @@
         });
   }
   
-  function changeStatus(id , newStatus){
-	console.log(id , newStatus);
-  }
+	function changeStatus(span , id , newStatus){
+		GM_xmlhttpRequest(
+		{
+			method: "POST",
+			headers: { 'Content-type' : 'application/x-www-form-urlencoded' },
+			data: encodeURI("external_id=" + BB_statid + "&user_id=" + id + "&type_id=" + newStatus  ),
+			url: bbScriptServer + "/roc/changetypeid",
+			onload: function(r)
+			{
+				if(r.status == 200)
+				{
+					console.log(r.status , r.responseText);
+					span.innerHTML = "[STATUS CHANGED - RELOAD PAGE]";
+					span.setAttribute( "style" , "color:#FFFFFF ; font-weight : bold; font-size : 14px ; cursor : default;");
+				}else{
+					document.getElementById("lolcontent").innerHTML = "STOP TRYING TO BREAK MY SCRIPT!!!, or might need to login again. I can't really tell";
+				}
+			}
+		});
+	}
   
   function DetectRunningInstance()
   {
@@ -268,7 +285,7 @@
 		if(userObj.TypeID === 2){
 			span.innerHTML = "[&#10004; - Approve]";
 			span.setAttribute("style" , "color:#159615 ; font-weight : bold; font-size : 14px ; cursor : pointer;" );
-			span.addEventListener("click" , function(id , newStatus){changeStatus(id , newStatus)}.bind(span , userObj.ExternalID , 3));
+			span.addEventListener("click" , function(id , newStatus){changeStatus( this , id , newStatus)}.bind(span , userObj.ExternalID , 3));
 			pendingTable.appendChild(tr);
 			if(pendingCounter % 2 == 0){
 				tr.setAttribute("class" , "even");
@@ -280,7 +297,7 @@
 		}else if(userObj.TypeID === 3){
 			span.innerHTML = "[&#10008; - Remove Access - Contact bold_ally to remove from DB]";
 			span.setAttribute("style" , "color:#b50101 ; font-weight : bold; font-size : 14px; cursor : pointer;" );
-			span.addEventListener("click" , function(id , newStatus){changeStatus(id , newStatus)}.bind(span , userObj.ExternalID , 2));
+			span.addEventListener("click" , function(id , newStatus){changeStatus( this , id , newStatus)}.bind(span , userObj.ExternalID , 2));
 			approvedTable.appendChild(tr);
 			if(approvedCounter % 2 == 0){
 				tr.setAttribute("class" , "even");

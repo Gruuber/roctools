@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -21,9 +22,11 @@ var db *sql.DB
 var err error
 
 func main() {
+	print("Server starting...")
 	r := mux.NewRouter()
 	r.HandleFunc("/roc/sign", sign).Methods("POST")
 	r.HandleFunc("/roc/getprofile", getprofile).Methods("POST")
+	r.HandleFunc("/roc/changetypeid", changetypeid).Methods("POST")
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -121,7 +124,7 @@ func getprofile(w http.ResponseWriter, r *http.Request) {
 	if session.Values["typeID"] == 4 {
 		//First get all non admin non bold_ally users;
 		allNonAdminUsers := getAllNonAdminUsers()
-		userValue := model.AdminMessage{Logged: true, Type: "<span style=\"color:#0066FF\">Don't tell anyone that I like you the most (bold_ally)</span>", TypeID: 4, UserEntries: *allNonAdminUsers}
+		userValue := model.AdminMessage{Logged: true, Type: "<span style=\"color:#0066FF\">Don't tell anyone that you are my favorite (bold_ally)</span>", TypeID: 4, UserEntries: *allNonAdminUsers}
 		js, err := json.Marshal(userValue)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -156,6 +159,61 @@ func getprofile(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(js)
+	}
+
+}
+
+func changetypeid(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	var typeID = r.Form["type_id"][0]
+	var userID = r.Form["user_id"][0]
+	typeIDInt, _ := strconv.ParseInt(typeID, 10, 64)
+
+	if !(typeIDInt == 2 || typeIDInt == 3) {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
+	}
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 {
+		db = getDBconnection()
+		stmt, err := db.Prepare("UPDATE users set type_id = (?) WHERE external_id=(?)")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = stmt.Exec(typeID, userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprint(w, "SUCCESS")
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
 	}
 
 }
