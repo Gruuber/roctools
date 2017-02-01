@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,12 +22,16 @@ var store = sessions.NewCookieStore([]byte("mywishisyourcommand"))
 var db *sql.DB
 var err error
 
+const unknownVal string = "???"
+
 func main() {
-	print("Server starting...")
+	println("Server starting....")
 	r := mux.NewRouter()
 	r.HandleFunc("/roc/sign", sign).Methods("POST")
 	r.HandleFunc("/roc/getprofile", getprofile).Methods("POST")
 	r.HandleFunc("/roc/changetypeid", changetypeid).Methods("POST")
+	r.HandleFunc("/roc/storesov", storesov).Methods("POST")
+	r.HandleFunc("/roc/getplayerpage", getplayerpage).Methods("POST")
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -203,7 +208,7 @@ func changetypeid(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
+		defer stmt.Close()
 		_, err = stmt.Exec(typeID, userID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -216,6 +221,156 @@ func changetypeid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+}
+
+func storesov(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	var userID = r.Form["user_id"][0]
+	var weaponStr = r.Form["weapons"][0]
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
+		playerID := getPlayerID(userID)
+
+		if playerID == -1 {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		weaponsBody := []byte(weaponStr)
+		weapons := make([]model.Weapon, 0)
+		json.Unmarshal(weaponsBody, &weapons)
+
+		preWeaponStr, err := getLastSOV(playerID)
+
+		if err == nil {
+			//We combine the 2 sells
+			preWBody := []byte(preWeaponStr)
+			preWeapons := make([]model.Weapon, 0)
+			json.Unmarshal(preWBody, &preWeapons)
+
+			for _, elem := range weapons {
+				//We only combine if we have the name
+				if elem.Name != unknownVal {
+					for _, preEl := range preWeapons {
+						//We now search for the weapons in previous states to try an combine it
+						if preEl.Name == elem.Name {
+							//After we have found the elem, we check if any fields needs to be combined
+							if elem.Quantity == -1 {
+								elem.Quantity = preEl.Quantity
+							}
+							if elem.Damage == unknownVal {
+								elem.Damage = preEl.Damage
+							}
+							if elem.Strength == unknownVal {
+								elem.Strength = preEl.Strength
+							}
+							if elem.Type == unknownVal {
+								elem.Type = preEl.Type
+							}
+							break
+						}
+					}
+				}
+			}
+		}
+
+		//Now we attempt to calculate the current SOV
+		sov := 0
+		for _, elem := range weapons {
+			sov += getItemSOV(elem)
+		}
+
+		err = saveSOV(playerID, sov, weapons)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Fprint(w, "SUCCESS")
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
+	}
+}
+
+func getplayerpage(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	var userID = r.Form["user_id"][0]
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
+		db = getDBconnection()
+		//Close database connection at the end
+		defer db.Close()
+
+		stmt, err := db.Prepare("SELECT sovs.value as sov , players.note from players join sovs ON players.id = sovs.player_id where players.external_player_id = (?) limit 1")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer stmt.Close()
+
+		var sov int64
+		var note string
+
+		_ = stmt.QueryRow(userID).Scan(&sov, &note)
+
+		playerValue := model.Player{Sov: sov, Note: note}
+		js, err := json.Marshal(playerValue)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
+	}
 }
 
 func login(w http.ResponseWriter, r *http.Request, password string, externalID string) {
@@ -269,7 +424,7 @@ func createSession(w http.ResponseWriter, r *http.Request, externalID string, ty
 }
 
 func getAllNonAdminUsers() *[]model.UserEntry {
-	var count int = 0
+	count := 0
 	db = getDBconnection()
 	//Close database connection at the end
 	defer db.Close()
@@ -317,4 +472,182 @@ func getDBconnection() *sql.DB {
 	}
 
 	return database
+}
+
+func getPlayerID(playerID string) int {
+
+	db = getDBconnection()
+
+	stmt, err := db.Prepare("select id from players where external_player_id = (?)")
+	if err != nil {
+		log.Fatal(err)
+		return -1
+	}
+
+	defer db.Close()
+	defer stmt.Close()
+
+	var dbID int
+	row, err := stmt.Query(playerID)
+	if err != nil {
+		log.Fatal(err)
+		return -1
+	}
+	defer row.Close()
+
+	if !row.Next() {
+		//User not yet in database. Need to insert user
+		stmt, err = db.Prepare("insert into players (external_player_id) values (?)")
+		if err != nil {
+			log.Fatal(err)
+			return -1
+		}
+		res, err := stmt.Exec(playerID)
+		if err != nil {
+			log.Fatal(err)
+			return -1
+		}
+
+		dbID64, err := res.LastInsertId()
+		if err != nil {
+			log.Fatal(err)
+			return -1
+		}
+		dbID = int(dbID64)
+	} else {
+		err := row.Scan(&dbID)
+		if err != nil {
+			log.Fatal(err)
+			return -1
+		}
+	}
+
+	return dbID
+}
+
+func getLastSOV(playerID int) (string, error) {
+	sovStr := ""
+	db = getDBconnection()
+	stmt, err := db.Prepare("select `value` from weapons where player_id = (?) limit 1")
+	if err != nil {
+		log.Fatal(err)
+		return sovStr, err
+	}
+
+	defer db.Close()
+	defer stmt.Close()
+
+	rows, err := stmt.Query(playerID)
+	if err != nil {
+		log.Fatal(err)
+		return sovStr, err
+	}
+
+	if rows.Next() {
+		err = rows.Scan(&sovStr)
+		if err != nil {
+			log.Fatal(err)
+			return sovStr, err
+		}
+		return sovStr, nil
+	}
+	return sovStr, errors.New("Sov string not found")
+}
+
+func getItemSOV(wep model.Weapon) int {
+	sov := 0
+	if wep.Quantity != -1 {
+		if wep.Name != "???" {
+			switch wep.Name {
+			case "Dagger", "Sai":
+				sov = 800 * wep.Quantity
+			case "Maul", "Shield":
+				sov = 12000 * wep.Quantity
+			case "Blade", "Mithril":
+				sov = 160000 * wep.Quantity
+			case "Excalibur", "Dragonskin":
+				sov = 800000 * wep.Quantity
+			case "Cloak", "Horn":
+				sov = 40000 * wep.Quantity
+			case "Hook", "Guard Dog":
+				sov = 80000 * wep.Quantity
+			case "Pickaxe", "Torch":
+				sov = 240000 * wep.Quantity
+			}
+		} else if wep.Strength != "30" && wep.Strength != unknownVal {
+			switch wep.Strength {
+			case "300":
+				sov = 12000 * wep.Quantity
+			case "3,000":
+				sov = 16000 * wep.Quantity
+			case "12,000":
+				sov = 800000 * wep.Quantity
+			case "50":
+				sov = 80000 * wep.Quantity
+			case "120":
+				sov = 240000 * wep.Quantity
+			}
+		} else if wep.Strength == "30" && wep.Type != unknownVal {
+			switch wep.Type {
+			case "Attack", "Defense":
+				sov = 800 * wep.Quantity
+			case "Spy", "Sentry":
+				sov = 40000 * wep.Quantity
+			}
+		}
+	}
+	return sov
+}
+
+func saveSOV(playerID int, sov int, w []model.Weapon) error {
+	db = getDBconnection()
+	defer db.Close()
+	//Weapons part
+	stmt, err := db.Prepare("insert into weapons (player_id , value , date) values ( (?) , (?) , NOW() )")
+	defer stmt.Close()
+	if err != nil {
+		return err
+	}
+	wbyte, err := json.Marshal(w)
+	if err != nil {
+		return err
+	}
+	res, err := stmt.Exec(playerID, string(wbyte))
+	if err != nil {
+		return err
+	}
+	weaponsID, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//End weapons part
+
+	//SOV part
+	stmt, err = db.Prepare("insert into sovs (player_id , `value` , date) values ( (?) , (?) , NOW() )")
+	if err != nil {
+		return err
+	}
+
+	res, err = stmt.Exec(playerID, sov)
+	if err != nil {
+		return err
+	}
+	sovID, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//End SOV part
+
+	//Update user
+	stmt, err = db.Prepare("UPDATE PLAYERS set sov_id = (?) , weapons_id = (?) , lastupdated = NOW() where id = (?)")
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(int(sovID), int(weaponsID), playerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
