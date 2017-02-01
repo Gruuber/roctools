@@ -6,7 +6,7 @@
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.01
+// @version     1.02
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -478,20 +478,19 @@
 				data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID),
 				url: bbScriptServer + "/roc/getplayerpage",
 				onload: function (r) {
-					console.log(r.status, r.responseText);
 					var obj = JSON.parse(r.responseText);
 					var tables = $(".sep.f");
 					var goldTable = tables[1];
 					var gtObj = $(goldTable);
 					if (obj.Sov !== "") {
 					var sov = obj.Sov;
-						var sovRow = $('<td class="lg" style="width: 25%"><b>SOV:</b></td><td class="lg" style="width: 75%">' + sov.toLocaleString() + '</td>');
+						var sovRow = $('<tr><td class="lg" style="width: 25%"><b>SOV:</b></td><td class="lg" style="width: 75%">' + sov.toLocaleString() + '</td></tr>');
 						gtObj.children().append(sovRow);
 					}
 					if (obj.Note !== "") {
 					var note = obj.Note
-						var sovRow = $('<td class="lg" style="width: 25%"><b>Note:</b></td><td class="lg" style="width: 75%">' + note + '</td>');
-						gtObj.children().append(sovRow);					
+						var noteRow = $('<tr><td class="lg" style="width: 25%"><b>Note:</b></td><td class="lg" style="width: 75%">' + note + '</td></tr>');
+						gtObj.children().append(noteRow);					
 					}
 
 				}
