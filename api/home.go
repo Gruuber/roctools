@@ -346,7 +346,7 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 		//Close database connection at the end
 		defer db.Close()
 
-		stmt, err := db.Prepare("SELECT sovs.value as sov , players.note from players join sovs ON players.id = sovs.player_id where players.external_player_id = (?) limit 1")
+		stmt, err := db.Prepare("SELECT sovs.value as sov , players.note from players join sovs ON players.id = sovs.player_id where players.external_player_id = (?) order by sovs.value DESC limit 1")
 		if err != nil {
 			log.Fatal(err)
 		}
