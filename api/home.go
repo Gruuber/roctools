@@ -751,7 +751,7 @@ func saveNote(id int, name string, note string) error {
 	db = getDBconnection()
 	defer db.Close()
 
-	stmt, err := db.Prepare("UPDATE PLAYERS set note = (?) , name = (?) , lastupdated = NOW() where id = (?)")
+	stmt, err := db.Prepare("UPDATE players set note = (?) , name = (?) , lastupdated = NOW() where id = (?)")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -768,7 +768,7 @@ func allSabList() *[]model.Player {
 	//Close database connection at the end
 	defer db.Close()
 
-	rows, err := db.Query("SELECT COUNT(DISTINCT  external_player_id) as `count` FROM players WHERE note like \"sab: %\"")
+	rows, err := db.Query("SELECT COUNT(DISTINCT  external_player_id) as `count` from players WHERE note like \"sab: %\"")
 	if err != nil {
 		panic(err.Error())
 	}
