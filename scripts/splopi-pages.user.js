@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name        Baldy Beaver
-// @namespace   roc.baldy.beaver
-// @description SPLoP API, aka splopi but better known as Baldy Beaver (Name was the collective effort of Sux0r and Whishy)
+// @name        SPLoP's little helper
+// @namespace   roc.splopi.beaver
+// @description SPLoP's little helper, the better name by jellybean
 // @include     https://ruinsofchaos.com/*
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.03
+// @version     1.04
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -45,7 +45,7 @@
 	var bbScriptServer = "http://52.10.254.235:8080";
 	//var bbScriptServer = "http://127.0.0.1:8080";
 	
-	var scriptName = "Baldy Beaver";
+	var scriptName = "SPLoP's little helper";
 	var url = document.location.toString();
 	var BB_version = 1;
 	var BB_server = "NA";
@@ -71,7 +71,7 @@
 	loadBBPage()
 
 	function addMenuPages() {
-		var bbMenu = $("<a class=\"bbMenu\" alt=\"Baldy Beaver\" href=\"base.php?bbpage=profile\"><span>VERY UGLY BUTTON</span></a>");
+		var bbMenu = $("<a class=\"bbMenu\" alt=\"SPLoP's little helper\" href=\"base.php?bbpage=profile\"><span>VERY UGLY BUTTON</span></a>");
 		var intelMenu = $("#menubar .menu7");
 		intelMenu.after(bbMenu);
 		bbMenu.css("display", "block");
@@ -81,7 +81,7 @@
 		bbMenu.css("color", "#C3BC9F");
 		bbMenu.css("font-weight", "bold");
 		
-		var sabMenu = $("<a class=\"sabMenu\" alt=\"Baldy Beaver\" href=\"base.php?bbpage=sablist\"><span>SAB LIST!</span></a>");
+		var sabMenu = $("<a class=\"sabMenu\" alt=\"SPLoP's little helper\" href=\"base.php?bbpage=sablist\"><span>SAB LIST!</span></a>");
 		var intelMenu = $("#menubar .menu7");
 		intelMenu.after(sabMenu);
 		sabMenu.css("display", "block");
