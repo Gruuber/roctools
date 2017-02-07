@@ -6,7 +6,7 @@
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.02
+// @version     1
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -44,6 +44,7 @@
 
 	var bbScriptServer = "http://52.10.254.235:8080";
 	//var bbScriptServer = "http://127.0.0.1:8080";
+	
 	var scriptName = "Baldy Beaver";
 	var url = document.location.toString();
 	var BB_version = 1;
@@ -79,11 +80,24 @@
 		bbMenu.css("padding", "4px 0 0 0");
 		bbMenu.css("color", "#C3BC9F");
 		bbMenu.css("font-weight", "bold");
+		
+		var sabMenu = $("<a class=\"sabMenu\" alt=\"Baldy Beaver\" href=\"base.php?bbpage=sablist\"><span>SAB LIST!</span></a>");
+		var intelMenu = $("#menubar .menu7");
+		intelMenu.after(sabMenu);
+		sabMenu.css("display", "block");
+		sabMenu.css("height", "22px");
+		sabMenu.css("background-color", "#333333");
+		sabMenu.css("padding", "4px 0 0 0");
+		sabMenu.css("color", "#FF0000");
+		sabMenu.css("font-weight", "bold");
+		sabMenu.css("font-size", "15px");
 	}
 
 	function loadBBPage() {
 		if (url.indexOf("/base.php?bbpage=profile") > 0) {
 			attemptLogin(bbBasePage);
+		} else if (url.indexOf("/base.php?bbpage=sablist") > 0) {
+			getSabList();
 		} else if (url.indexOf("/inteldetail.php") > 0) {
 			inteldetail();
 		} else if (url.indexOf("/stats.php") > 0) {
@@ -91,6 +105,27 @@
 		}
 	}
 
+	function getSabList(){
+		var lolcontent = document.getElementById("lolcontent");
+		lolcontent.innerHTML = "GETTING WAR DATA!!!!";
+		
+		GM_xmlhttpRequest({
+			method: "POST",
+			headers: {
+				'Content-type': 'application/x-www-form-urlencoded'
+			},
+			data: encodeURI("external_id=" + BB_statid),
+			url: bbScriptServer + "/roc/getsablist",
+			onload: function (r) {
+				if (r.status == 200) {
+					var playerArray = JSON.parse(r.responseText);
+					loadSabList(playerArray);
+				}
+			}
+		});
+		
+	}
+	
 	function bbBasePage() {
 		var lolcontent = document.getElementById("lolcontent");
 		lolcontent.innerHTML = "GETTING DATA, please hold on. Baldy script is balding stuff...";
@@ -478,21 +513,34 @@
 				data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID),
 				url: bbScriptServer + "/roc/getplayerpage",
 				onload: function (r) {
+				
 					var obj = JSON.parse(r.responseText);
 					var tables = $(".sep.f");
 					var goldTable = tables[1];
 					var gtObj = $(goldTable);
-					if (obj.Sov !== "") {
-					var sov = obj.Sov;
+					var pObj = obj.Player;
+					if (pObj.Sov !== "") {
+						var sov = pObj.Sov;
 						var sovRow = $('<tr><td class="lg" style="width: 25%"><b>SOV:</b></td><td class="lg" style="width: 75%">' + sov.toLocaleString() + '</td></tr>');
 						gtObj.children().append(sovRow);
 					}
-					if (obj.Note !== "") {
-					var note = obj.Note
+					if (pObj.Note !== "") {
+						var note = pObj.Note
 						var noteRow = $('<tr><td class="lg" style="width: 25%"><b>Note:</b></td><td class="lg" style="width: 75%">' + note + '</td></tr>');
 						gtObj.children().append(noteRow);					
 					}
 
+					if(obj.Type === 4){
+						var addNoteBtn = $("<button id=\"updateBTN\">Update</button>");
+						addNoteBtn.on("click" , updateUserNote) ;
+						var  tr = $('<tr></tr>');
+						var td = $('<td class="lg" colspan="2"><input type="text" style="width:75%;" id="updatenode" ></td>');
+						td.append(addNoteBtn);
+						addNoteBtn.css("width" , "23%");
+						tr.append(td);
+						gtObj.children().append(tr);
+					}
+					
 				}
 			});
 
@@ -500,9 +548,98 @@
 			console.log("STOP TRYING TO BREAK MY SCRIPT");
 		}
 	}
+	
+	function updateUserNote(){
+		var pageURL = window.location.href;
+		var userIdTok = pageURL.match(/stats\.php\?id=([0-9]*)/);
+		if (userIdTok.length === 2) {
+			var userID = userIdTok[1];
+			
+			var tables = $(".sep.f");
+			var userInfoTb = tables[0];
+			var userInfoth = $(userInfoTb).find("th");
+			var playerName = userInfoth[0].innerHTML;
+
+			var note = $("#updatenode").val();
+			
+			GM_xmlhttpRequest({
+				method: "POST",
+				headers: {
+					'Content-type': 'application/x-www-form-urlencoded'
+				},
+				data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID + "&playername=" + playerName + "&note=" + note),
+				url: bbScriptServer + "/roc/updateNote",
+				onload: function (r) {
+					if (r.status == 200) {
+						$("#updateBTN").html("UPDATED!");
+						$("#updateBTN").css("background-color" ,"#aaffff"); 
+					}
+				}
+			});
+			
+				
+		}
+	}
 
 	function replaceAll(target, search, replacement) {
 		return target.split(search).join(replacement);
 	};
 
+	function loadSabList(players){
+		var lolcontent = document.getElementById("lolcontent");
+		var sabTable = document.createElement("table");
+		sabTable.setAttribute("width", "100%");
+		sabTable.setAttribute("cellspacing", "0");
+		sabTable.setAttribute("border", "0");
+
+		var headerTr = document.createElement("tr");
+		var headerTd = document.createElement("td");
+		headerTd.innerHTML = "APPROVED SAB LIST";
+		headerTd.setAttribute("colspan", "4");
+		headerTd.setAttribute("class", "th topcap");
+		headerTr.appendChild(headerTd);
+		sabTable.appendChild(headerTr);
+		
+		var counter = 0;
+
+		for (var index = 0; index < players.length; index++) {
+			userObj = players[index];
+			
+			var tr = document.createElement("tr");
+			
+			var tdName = document.createElement("td");
+			tdName.innerHTML = '<a href="https://ruinsofchaos.com/stats.php?id='+userObj.ExternalID+'">' + userObj.Name + '</a>';
+			tdName.setAttribute("width", "25%");
+			
+			var tdNote = document.createElement("td");
+			tdNote.innerHTML = getSabLinks(userObj.Note , userObj.Name);
+			tdNote.setAttribute("width", "75%");
+
+			tr.appendChild(tdName);
+			tr.appendChild(tdNote);
+			
+			if (counter % 2 == 0) {
+				tr.setAttribute("class", "even");
+			} else {
+				tr.setAttribute("class", "odd");
+			}
+			sabTable.appendChild(tr);
+			counter++;
+			
+		}
+		lolcontent.innerHTML = "";
+		lolcontent.appendChild(sabTable);
+		
+	}
+	
+	function getSabLinks(note , name){
+		var weapons = ["Dagger" , "Maul" , "Blade" , "Excalibur" , "Sai" , "Shield" , "Mithril" , "Dragonskin" , "Cloak" , "Hook" , "Pickaxe" , "Horn" , "Guard Dog" , "Torch"];
+		
+		for (var index in weapons){
+			note = note.replace(weapons[index] , '<a href="https://ruinsofchaos.com/attack.php?sab='+name+'&weapon='+weapons[index]+'">'+weapons[index]+'</a>' )
+		}
+		
+		return note;
+	}
+	
 })()
