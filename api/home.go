@@ -32,6 +32,8 @@ func main() {
 	r.HandleFunc("/roc/changetypeid", changetypeid).Methods("POST")
 	r.HandleFunc("/roc/storesov", storesov).Methods("POST")
 	r.HandleFunc("/roc/getplayerpage", getplayerpage).Methods("POST")
+	r.HandleFunc("/roc/updateNote", updateNote).Methods("POST")
+	r.HandleFunc("/roc/getsablist", getsablist).Methods("POST")
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -346,7 +348,7 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 		//Close database connection at the end
 		defer db.Close()
 
-		stmt, err := db.Prepare("SELECT sovs.value as sov , players.note from players join sovs ON players.id = sovs.player_id where players.external_player_id = (?) limit 1")
+		stmt, err := db.Prepare("SELECT COALESCE(sovs.value, 0) as sov , players.note as note from players left outer join sovs ON players.id = sovs.player_id where players.external_player_id = (?) limit 1")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -357,8 +359,18 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 
 		_ = stmt.QueryRow(userID).Scan(&sov, &note)
 
+		println(note)
+		println(sov)
+
 		playerValue := model.Player{Sov: sov, Note: note}
-		js, err := json.Marshal(playerValue)
+
+		typeID := 3
+		if session.Values["typeID"] == 4 {
+			typeID = 4
+		}
+
+		replyMessage := model.UserStateReply{Type: typeID, Player: playerValue}
+		js, err := json.Marshal(replyMessage)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -371,6 +383,89 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "You are not authorized to perform this action")
 		return
 	}
+}
+
+func updateNote(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	var userID = r.Form["user_id"][0]
+	var playerName = r.Form["playername"][0]
+	var note = r.Form["note"][0]
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 {
+		playerID := getPlayerID(userID)
+		err := saveNote(playerID, playerName, note)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Fprint(w, "SUCCESS")
+
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
+	}
+}
+
+func getsablist(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
+		sabList := allSabList()
+		js, err := json.Marshal(*sabList)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
+	}
+
 }
 
 func login(w http.ResponseWriter, r *http.Request, password string, externalID string) {
@@ -650,4 +745,56 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 	}
 
 	return nil
+}
+
+func saveNote(id int, name string, note string) error {
+	db = getDBconnection()
+	defer db.Close()
+
+	stmt, err := db.Prepare("UPDATE PLAYERS set note = (?) , name = (?) , lastupdated = NOW() where id = (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(note, name, id)
+
+	return err
+}
+
+func allSabList() *[]model.Player {
+	count := 0
+	db = getDBconnection()
+	//Close database connection at the end
+	defer db.Close()
+
+	rows, err := db.Query("SELECT COUNT(DISTINCT  external_player_id) as `count` FROM players WHERE note like \"sab: %\"")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&count)
+	}
+
+	rows, err = db.Query("select external_player_id , name , note from players where note like \"sab: %\"")
+	defer rows.Close()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	playerEntries := make([]model.Player, count)
+
+	counter := 0
+	for rows.Next() {
+		var externalID int
+		var name string
+		var note string
+		err = rows.Scan(&externalID, &name, &note)
+		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note}
+		counter++
+	}
+
+	return &playerEntries
 }
