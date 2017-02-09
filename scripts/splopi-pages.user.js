@@ -615,7 +615,7 @@
 		var seTd = document.createElement("td");
 		seTd.innerHTML = "<b>Sentry</b>";	
 		var daTd = document.createElement("td");
-		daTd.innerHTML = "<b>Defence</b>";
+		daTd.innerHTML = "<b>Defense</b>";
 
 		listTr.appendChild(nameTd);
 		listTr.appendChild(noteTd);
