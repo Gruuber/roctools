@@ -756,7 +756,7 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 
 func saveStats(playerID int, sa string, da string, sp string, se string) error {
 	psa, pda, psp, pse, err := getStats(playerID)
-	if err != nil {
+	if err == nil {
 		if sa == unknownVal {
 			sa = psa
 		}
