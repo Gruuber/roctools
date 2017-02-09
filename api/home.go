@@ -358,7 +358,7 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 		//Close database connection at the end
 		defer db.Close()
 
-		stmt, err := db.Prepare("SELECT COALESCE(sovs.value, 0) as sov , players.note as note from players left outer join sovs ON players.id = sovs.player_id where players.external_player_id = (?) order by sovs.id DESC limit 1")
+		stmt, err := db.Prepare("SELECT COALESCE(sovs.value, 0) as sov , players.note as note from players left outer join sovs ON players.sov_id = sovs.id where players.external_player_id = (?) order by sovs.id DESC limit 1")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -741,7 +741,7 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 	//End SOV part
 
 	//Update user
-	stmt, err = db.Prepare("UPDATE PLAYERS set sov_id = (?) , weapons_id = (?) , lastupdated = NOW() where id = (?)")
+	stmt, err = db.Prepare("UPDATE players set sov_id = (?) , weapons_id = (?) , lastupdated = NOW() where id = (?)")
 	if err != nil {
 		return err
 	}
@@ -793,7 +793,7 @@ func saveStats(playerID int, sa string, da string, sp string, se string) error {
 	}
 
 	//Update user
-	stmt, err = db.Prepare("UPDATE PLAYERS set stat_id = (?) , lastupdated = NOW() where id = (?)")
+	stmt, err = db.Prepare("UPDATE players set stat_id = (?) , lastupdated = NOW() where id = (?)")
 	if err != nil {
 		return err
 	}
@@ -867,7 +867,7 @@ func allSabList() *[]model.Player {
 		err = rows.Scan(&count)
 	}
 
-	rows, err = db.Query("select players.external_player_id , players.name , players.note , COALESCE(stats.sa , \"???\") , COALESCE(stats.da , \"???\") , COALESCE(stats.sp,\"???\") , COALESCE(stats.se , \"???\") from players left outer join stats on players.id = stats.player_id where note like \"sab: %\" group by players.id  order by stats.id DESC")
+	rows, err = db.Query("select players.external_player_id , players.name , players.note , COALESCE(stats.sa , \"???\") , COALESCE(stats.da , \"???\") , COALESCE(stats.sp,\"???\") , COALESCE(stats.se , \"???\") from players left outer join stats on players.stat_id = stats.id where note like \"sab: %\" group by players.id  order by stats.id DESC")
 	defer rows.Close()
 	if err != nil {
 		panic(err.Error())
