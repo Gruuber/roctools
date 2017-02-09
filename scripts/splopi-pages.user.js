@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name        SPLoP's little helper
 // @namespace   roc.splopi.beaver
-// @description SPLoP's little helper, the better name by jellybean
+// @description SPLoP's little helper, the better name by Jellybean
 // @include     https://ruinsofchaos.com/*
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.04
+// @version     1.05
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -119,6 +119,7 @@
 			onload: function (r) {
 				if (r.status == 200) {
 					var playerArray = JSON.parse(r.responseText);
+					console.log(playerArray);
 					loadSabList(playerArray);
 				}
 			}
@@ -481,16 +482,21 @@
 
 		});
 		var webSTR = JSON.stringify(weaponsArray);
-		//Send the weapon array as an string to the server.
-		//We also do not care about the result. The server will decide what to do with the data.
-		//The results will show on the user page
 
+		//Get the stats of the user
+		var rows = $(".sep.f").find("tr");
+		var sa = $(rows[3]).find("td")[1].innerHTML;
+		var da = $(rows[4]).find("td")[1].innerHTML;
+		var sp = $(rows[5]).find("td")[1].innerHTML;
+		var se = $(rows[6]).find("td")[1].innerHTML;
+		
+		
 		GM_xmlhttpRequest({
 			method: "POST",
 			headers: {
 				'Content-type': 'application/x-www-form-urlencoded'
 			},
-			data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID + "&weapons=" + webSTR),
+			data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID + "&weapons=" + webSTR + "&sa=" + sa + "&da=" + da + "&sp=" + sp + "&se=" + se  ),
 			url: bbScriptServer + "/roc/storesov",
 			onload: function (r) {
 				//Do nothing
@@ -595,10 +601,27 @@
 		var headerTr = document.createElement("tr");
 		var headerTd = document.createElement("td");
 		headerTd.innerHTML = "APPROVED SAB LIST";
-		headerTd.setAttribute("colspan", "4");
+		headerTd.setAttribute("colspan", "6");
 		headerTd.setAttribute("class", "th topcap");
 		headerTr.appendChild(headerTd);
 		sabTable.appendChild(headerTr);
+		
+		var listTr = document.createElement("tr");
+		var nameTd = document.createElement("td");
+		nameTd.innerHTML = "<b>Sab target</b>";
+		var noteTd = document.createElement("td");
+		noteTd.innerHTML = "<b>Sab items</b>";
+		noteTd.setAttribute("colspan", "3");
+		var seTd = document.createElement("td");
+		seTd.innerHTML = "<b>Sentry</b>";	
+		var daTd = document.createElement("td");
+		daTd.innerHTML = "<b>Defence</b>";
+
+		listTr.appendChild(nameTd);
+		listTr.appendChild(noteTd);
+		listTr.appendChild(seTd);
+		listTr.appendChild(daTd);
+		sabTable.appendChild(listTr);
 		
 		var counter = 0;
 
@@ -609,14 +632,21 @@
 			
 			var tdName = document.createElement("td");
 			tdName.innerHTML = '<a href="https://ruinsofchaos.com/stats.php?id='+userObj.ExternalID+'">' + userObj.Name + '</a>';
-			tdName.setAttribute("width", "25%");
 			
 			var tdNote = document.createElement("td");
 			tdNote.innerHTML = getSabLinks(userObj.Note , userObj.Name);
-			tdNote.setAttribute("width", "75%");
+			tdNote.setAttribute("colspan", "3");
 
+			var tdSE = document.createElement("td");
+			tdSE.innerHTML = userObj.Se;
+			
+			var tdDA = document.createElement("td");
+			tdDA.innerHTML = userObj.Da;
+			
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
+			tr.appendChild(tdSE);
+			tr.appendChild(tdDA);
 			
 			if (counter % 2 == 0) {
 				tr.setAttribute("class", "even");

@@ -6,4 +6,8 @@ type Player struct {
 	Note       string
 	ExternalID int
 	Name       string
+	Sa         string
+	Da         string
+	Sp         string
+	Se         string
 }

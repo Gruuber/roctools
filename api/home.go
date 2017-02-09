@@ -237,6 +237,10 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 
 	var userID = r.Form["user_id"][0]
 	var weaponStr = r.Form["weapons"][0]
+	var sa = r.Form["sa"][0]
+	var da = r.Form["da"][0]
+	var sp = r.Form["sp"][0]
+	var se = r.Form["se"][0]
 
 	session, err := store.Get(r, "session-"+externalID)
 	if err != nil {
@@ -253,6 +257,12 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 
 	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
 		playerID := getPlayerID(userID)
+
+		err = saveStats(playerID, sa, da, sp, se)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		if playerID == -1 {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -358,9 +368,6 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 		var note string
 
 		_ = stmt.QueryRow(userID).Scan(&sov, &note)
-
-		println(note)
-		println(sov)
 
 		playerValue := model.Player{Sov: sov, Note: note}
 
@@ -623,7 +630,7 @@ func getPlayerID(playerID string) int {
 func getLastSOV(playerID int) (string, error) {
 	sovStr := ""
 	db = getDBconnection()
-	stmt, err := db.Prepare("select `value` from weapons where player_id = (?) limit 1")
+	stmt, err := db.Prepare("select `value` from weapons where player_id = (?) order by id DESC  limit 1")
 	if err != nil {
 		log.Fatal(err)
 		return sovStr, err
@@ -652,7 +659,7 @@ func getLastSOV(playerID int) (string, error) {
 func getItemSOV(wep model.Weapon) int {
 	sov := 0
 	if wep.Quantity != -1 {
-		if wep.Name != "???" {
+		if wep.Name != unknownVal {
 			switch wep.Name {
 			case "Dagger", "Sai":
 				sov = 800 * wep.Quantity
@@ -747,6 +754,88 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 	return nil
 }
 
+func saveStats(playerID int, sa string, da string, sp string, se string) error {
+	psa, pda, psp, pse, err := getStats(playerID)
+	if err != nil {
+		if sa == unknownVal {
+			sa = psa
+		}
+		if da == unknownVal {
+			da = pda
+		}
+		if sp == unknownVal {
+			sp = psp
+		}
+		if se == unknownVal {
+			se = pse
+		}
+	}
+
+	db = getDBconnection()
+	defer db.Close()
+
+	stmt, err := db.Prepare("insert into stats (player_id , sa , da , sp , se , date) values ( (?) , (?) , (?) , (?) , (?) , NOW() )")
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	res, err := stmt.Exec(playerID, sa, da, sp, se)
+	if err != nil {
+		print(err)
+		return err
+	}
+
+	statID, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	//Update user
+	stmt, err = db.Prepare("UPDATE PLAYERS set stat_id = (?) , lastupdated = NOW() where id = (?)")
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(int(statID), playerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getStats(playerID int) (string, string, string, string, error) {
+	db = getDBconnection()
+	stmt, err := db.Prepare("select sa , da , sp , se from stats where player_id = (?) order by id DESC  limit 1")
+	if err != nil {
+		log.Fatal(err)
+		return unknownVal, unknownVal, unknownVal, unknownVal, err
+	}
+
+	defer db.Close()
+	defer stmt.Close()
+
+	rows, err := stmt.Query(playerID)
+	if err != nil {
+		log.Fatal(err)
+		return unknownVal, unknownVal, unknownVal, unknownVal, err
+	}
+
+	var sa, da, sp, se string
+
+	if rows.Next() {
+		err = rows.Scan(&sa, &da, &sp, &se)
+		if err != nil {
+			log.Fatal(err)
+			return unknownVal, unknownVal, unknownVal, unknownVal, err
+		}
+		return sa, da, sp, se, nil
+	}
+	return unknownVal, unknownVal, unknownVal, unknownVal, errors.New("Stats string not found")
+}
+
 func saveNote(id int, name string, note string) error {
 	db = getDBconnection()
 	defer db.Close()
@@ -778,7 +867,7 @@ func allSabList() *[]model.Player {
 		err = rows.Scan(&count)
 	}
 
-	rows, err = db.Query("select external_player_id , name , note from players where note like \"sab: %\"")
+	rows, err = db.Query("select players.external_player_id , players.name , players.note , COALESCE(stats.sa , \"???\") , COALESCE(stats.da , \"???\") , COALESCE(stats.sp,\"???\") , COALESCE(stats.se , \"???\") from players left outer join stats on players.id = stats.player_id where note like \"sab: %\" group by players.id  order by stats.id DESC")
 	defer rows.Close()
 	if err != nil {
 		panic(err.Error())
@@ -791,8 +880,12 @@ func allSabList() *[]model.Player {
 		var externalID int
 		var name string
 		var note string
-		err = rows.Scan(&externalID, &name, &note)
-		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note}
+		var sa string
+		var da string
+		var sp string
+		var se string
+		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se)
+		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp}
 		counter++
 	}
 
