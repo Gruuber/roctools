@@ -6,7 +6,7 @@
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.07.1
+// @version     1.07.2
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -70,8 +70,10 @@
 	}
 
 	//Check if user is logged in before loading the scripts
-	loadBBPage()
-
+	loadBBPage();
+	
+	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; }");
+	
 	function addMenuPages() {
 		var bbMenu = $("<a class=\"bbMenu\" alt=\"SPLoP's little helper\" href=\"base.php?bbpage=profile\"><span>VERY UGLY BUTTON</span></a>");
 		var intelMenu = $("#menubar .menu7");
@@ -638,7 +640,7 @@
 		var headerTr = document.createElement("tr");
 		var headerTd = document.createElement("td");
 		headerTd.innerHTML = "APPROVED SAB LIST";
-		headerTd.setAttribute("colspan", "9");
+		headerTd.setAttribute("colspan", "7");
 		headerTd.setAttribute("class", "th topcap");
 		headerTr.appendChild(headerTd);
 		sabTable.appendChild(headerTr);
@@ -648,7 +650,6 @@
 		nameTd.innerHTML = "<b>Sab target</b>";
 		var noteTd = document.createElement("td");
 		noteTd.innerHTML = "<b>Sab items</b>";
-		noteTd.setAttribute("colspan", "3");
 		var tffTd = document.createElement("td");
 		tffTd.innerHTML = "<b>Tff</b>";
 		var seTd = document.createElement("td");
@@ -693,7 +694,6 @@
 			
 			var tdNote = document.createElement("td");
 			tdNote.innerHTML = getSabLinks(userObj.Note , userObj.Name);
-			tdNote.setAttribute("colspan", "3");
 
 			var tdSE = document.createElement("td");
 			tdSE.innerHTML = userObj.Se === -1 ? "???" : userObj.Se.toLocaleString() ;
@@ -720,9 +720,9 @@
 			
 			
 			if (counter % 2 == 0) {
-				tr.setAttribute("class", "even");
+				tr.setAttribute("class", "even sabentry");
 			} else {
-				tr.setAttribute("class", "odd");
+				tr.setAttribute("class", "odd sabentry");
 			}
 			sabTable.appendChild(tr);
 			counter++;
