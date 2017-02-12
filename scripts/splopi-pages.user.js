@@ -699,10 +699,10 @@
 			tdSE.innerHTML = userObj.Se === -1 ? "???" : userObj.Se.toLocaleString() ;
 			
 			var tdDA = document.createElement("td");
-			tdDA.innerHTML = userObj.Da;
+			tdDA.innerHTML = userObj.Da === -1 ? "???" : userObj.Da.toLocaleString() ;
 			
 			var tdTFF = document.createElement("td");
-			tdTFF.innerHTML = userObj.Tff;
+			tdTFF.innerHTML = userObj.Tff.toLocaleString();
 			
 			var tdSA = document.createElement("td");
 			tdSA.innerHTML = userObj.Sa === -1 ? "???" : userObj.Sa.toLocaleString() ;
