@@ -532,7 +532,12 @@
 	}
 
 	function stats() {
-		var tff = $(".sep.f").eq(0).find("tr").eq(5).find("td").eq(1).html().split(" ")[0].split(",").join("");
+		var tff = 0;
+		if($(".sep.f").eq(0).find("tr").eq(5).find("td").eq(0).html() === "<b>Fort:</b>"){
+			tff = $(".sep.f").eq(0).find("tr").eq(6).find("td").eq(1).html().split(" ")[0].split(",").join("");
+		}else{
+			tff = $(".sep.f").eq(0).find("tr").eq(5).find("td").eq(1).html().split(" ")[0].split(",").join("");
+		}
 		var name = $(".sep.f").eq(0).find("tr").eq(0).find("th").html();
 		
 		var pageURL = window.location.href;
