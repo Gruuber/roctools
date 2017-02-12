@@ -6,7 +6,7 @@
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.07
+// @version     1.07.1
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -133,7 +133,7 @@
 	function orderSabList(type){
 		for( var i = 0 ; i < sabListArr.length ; i++){
 			for( var j =  0 ; j < sabListArr.length - i - 1 ; j++){	
-				if( sabListArr[j][type] > sabListArr[j + 1][type]){
+				if( sabListArr[j][type] < sabListArr[j + 1][type]){
 					var temp = sabListArr[j];
 					sabListArr[j] = sabListArr[j + 1];
 					sabListArr[j + 1] = temp;
