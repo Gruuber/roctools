@@ -6,7 +6,7 @@
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.06
+// @version     1.07
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
