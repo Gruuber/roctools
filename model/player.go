@@ -6,8 +6,9 @@ type Player struct {
 	Note       string
 	ExternalID int
 	Name       string
-	Sa         string
-	Da         string
-	Sp         string
-	Se         string
+	Sa         string `json:"Sa,omitempty"`
+	Da         string `json:"Da,omitempty"`
+	Sp         string `json:"Sp,omitempty"`
+	Se         string `json:"Se,omitempty"`
+	Tff        string `json:"Tff,omitempty"`
 }

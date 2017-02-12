@@ -6,7 +6,7 @@
 // @exclude     https://ruinsofchaos.com/index.php*
 // @exclude     https://ruinsofchaos.com/register.php*
 // @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.05
+// @version     1.06
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -47,14 +47,16 @@
 	
 	var scriptName = "SPLoP's little helper";
 	var url = document.location.toString();
-	var BB_version = 1;
-	var BB_server = "NA";
 
+	var sabListArr = [];
+	
 	var BB_username = GM_getValue("BB_username", "");
 	var BB_password = GM_getValue("BB_password", "");
 	var BB_statid = GM_getValue("BB_statid", "");
 	var loggedIn = (GM_getValue("BB_SESSION_TYPE", "") === "") ? "NODATA" : GM_getValue("BB_SESSION_TYPE", "");
 
+	
+	
 	if (BB_statid === "") {
 		var userIdTok = document.getElementById("s_username").href.match(/stats\.php\?id=([0-9]*)/);
 		BB_statid = userIdTok[1]
@@ -119,12 +121,36 @@
 			onload: function (r) {
 				if (r.status == 200) {
 					var playerArray = JSON.parse(r.responseText);
-					console.log(playerArray);
-					loadSabList(playerArray);
+					sabListArr = prepareSabList(playerArray);
+					orderSabList("Tff");
+					loadSabList();
 				}
 			}
 		});
 		
+	}
+	
+	function orderSabList(type){
+		for( var i = 0 ; i < sabListArr.length ; i++){
+			for( var j =  0 ; j < sabListArr.length - i - 1 ; j++){	
+				if( sabListArr[j][type] > sabListArr[j + 1][type]){
+					var temp = sabListArr[j];
+					sabListArr[j] = sabListArr[j + 1];
+					sabListArr[j + 1] = temp;
+				}
+			}
+		}
+	}
+	
+	function prepareSabList(list){
+		for(var index in list){
+			list[index].Tff = parseInt(list[index].Tff);
+			list[index].Sa = (list[index].Sa === "???") ? -1 : parseInt(replaceAll(list[index].Sa , "," , "")); 
+			list[index].Da = (list[index].Da === "???") ? -1 : parseInt(replaceAll(list[index].Da , "," , "")); 
+			list[index].Sp = (list[index].Sp === "???") ? -1 : parseInt(replaceAll(list[index].Sp , "," , "")); 
+			list[index].Se = (list[index].Se === "???") ? -1 : parseInt(replaceAll(list[index].Se , "," , "")); 
+		}
+		return list;
 	}
 	
 	function bbBasePage() {
@@ -506,6 +532,9 @@
 	}
 
 	function stats() {
+		var tff = $(".sep.f").eq(0).find("tr").eq(5).find("td").eq(1).html().split(" ")[0].split(",").join("");
+		var name = $(".sep.f").eq(0).find("tr").eq(0).find("th").html();
+		
 		var pageURL = window.location.href;
 		var userIdTok = pageURL.match(/stats\.php\?id=([0-9]*)/);
 		if (userIdTok.length === 2) {
@@ -516,7 +545,7 @@
 				headers: {
 					'Content-type': 'application/x-www-form-urlencoded'
 				},
-				data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID),
+				data: encodeURI("external_id=" + BB_statid + "&user_id=" + userID + "&name=" + name + "&tff=" +tff),
 				url: bbScriptServer + "/roc/getplayerpage",
 				onload: function (r) {
 				
@@ -591,7 +620,7 @@
 		return target.split(search).join(replacement);
 	};
 
-	function loadSabList(players){
+	function loadSabList(){
 		var lolcontent = document.getElementById("lolcontent");
 		var sabTable = document.createElement("table");
 		sabTable.setAttribute("width", "100%");
@@ -601,7 +630,7 @@
 		var headerTr = document.createElement("tr");
 		var headerTd = document.createElement("td");
 		headerTd.innerHTML = "APPROVED SAB LIST";
-		headerTd.setAttribute("colspan", "6");
+		headerTd.setAttribute("colspan", "9");
 		headerTd.setAttribute("class", "th topcap");
 		headerTr.appendChild(headerTd);
 		sabTable.appendChild(headerTr);
@@ -612,21 +641,42 @@
 		var noteTd = document.createElement("td");
 		noteTd.innerHTML = "<b>Sab items</b>";
 		noteTd.setAttribute("colspan", "3");
+		var tffTd = document.createElement("td");
+		tffTd.innerHTML = "<b>Tff</b>";
 		var seTd = document.createElement("td");
 		seTd.innerHTML = "<b>Sentry</b>";	
 		var daTd = document.createElement("td");
 		daTd.innerHTML = "<b>Defense</b>";
+		var saTd = document.createElement("td");
+		saTd.innerHTML = "<b>Strike</b>";
+		var spTd = document.createElement("td");
+		spTd.innerHTML = "<b>Spy</b>";
 
+		tffTd.setAttribute("style" , "cursor:pointer");
+		daTd.setAttribute("style" , "cursor:pointer");
+		seTd.setAttribute("style" , "cursor:pointer");
+		saTd.setAttribute("style" , "cursor:pointer");
+		spTd.setAttribute("style" , "cursor:pointer");
+		
+		tffTd.addEventListener("click", reloadSablist.bind(tffTd, "Tff"));
+		daTd.addEventListener("click", reloadSablist.bind(daTd, "Da"));
+		seTd.addEventListener("click", reloadSablist.bind(seTd, "Se"));
+		saTd.addEventListener("click", reloadSablist.bind(saTd, "Sa"));
+		spTd.addEventListener("click", reloadSablist.bind(spTd, "Sp"));
+		
 		listTr.appendChild(nameTd);
 		listTr.appendChild(noteTd);
-		listTr.appendChild(seTd);
+		listTr.appendChild(tffTd);
 		listTr.appendChild(daTd);
+		listTr.appendChild(seTd);
+		listTr.appendChild(saTd);
+		listTr.appendChild(spTd);
 		sabTable.appendChild(listTr);
 		
 		var counter = 0;
 
-		for (var index = 0; index < players.length; index++) {
-			userObj = players[index];
+		for (var index = 0; index < sabListArr.length; index++) {
+			userObj = sabListArr[index];
 			
 			var tr = document.createElement("tr");
 			
@@ -638,15 +688,28 @@
 			tdNote.setAttribute("colspan", "3");
 
 			var tdSE = document.createElement("td");
-			tdSE.innerHTML = userObj.Se;
+			tdSE.innerHTML = userObj.Se === -1 ? "???" : userObj.Se.toLocaleString() ;
 			
 			var tdDA = document.createElement("td");
 			tdDA.innerHTML = userObj.Da;
 			
+			var tdTFF = document.createElement("td");
+			tdTFF.innerHTML = userObj.Tff;
+			
+			var tdSA = document.createElement("td");
+			tdSA.innerHTML = userObj.Sa === -1 ? "???" : userObj.Sa.toLocaleString() ;
+			
+			var tdSP = document.createElement("td");
+			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
+			
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
-			tr.appendChild(tdSE);
+			tr.appendChild(tdTFF);
 			tr.appendChild(tdDA);
+			tr.appendChild(tdSE);
+			tr.appendChild(tdSA);
+			tr.appendChild(tdSP);
+			
 			
 			if (counter % 2 == 0) {
 				tr.setAttribute("class", "even");
@@ -660,6 +723,11 @@
 		lolcontent.innerHTML = "";
 		lolcontent.appendChild(sabTable);
 		
+	}
+	
+	function reloadSablist(type){
+		orderSabList(type);
+		loadSabList();
 	}
 	
 	function getSabLinks(note , name){

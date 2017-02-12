@@ -339,6 +339,8 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var userID = r.Form["user_id"][0]
+	var userName = r.Form["name"][0]
+	var userTff = r.Form["tff"][0]
 
 	session, err := store.Get(r, "session-"+externalID)
 	if err != nil {
@@ -354,6 +356,11 @@ func getplayerpage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
+		err := updatePlayer(userID, userName, userTff)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		db = getDBconnection()
 		//Close database connection at the end
 		defer db.Close()
@@ -754,6 +761,21 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 	return nil
 }
 
+func updatePlayer(playerID string, playerName string, playerTff string) error {
+	db = getDBconnection()
+	defer db.Close()
+
+	stmt, err := db.Prepare("UPDATE players set tff = (?) , name = (?) , lastupdated = NOW() where external_player_id = (?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(playerTff, playerName, playerID)
+
+	return err
+}
+
 func saveStats(playerID int, sa string, da string, sp string, se string) error {
 	psa, pda, psp, pse, err := getStats(playerID)
 	if err == nil {
@@ -867,7 +889,7 @@ func allSabList() *[]model.Player {
 		err = rows.Scan(&count)
 	}
 
-	rows, err = db.Query("select players.external_player_id , players.name , players.note , COALESCE(stats.sa , \"???\") , COALESCE(stats.da , \"???\") , COALESCE(stats.sp,\"???\") , COALESCE(stats.se , \"???\") from players left outer join stats on players.stat_id = stats.id where note like \"sab: %\" group by players.id  order by stats.id DESC")
+	rows, err = db.Query("select players.external_player_id , players.name , players.note , COALESCE(stats.sa , \"???\") , COALESCE(stats.da , \"???\") , COALESCE(stats.sp,\"???\") , COALESCE(stats.se , \"???\") , COALESCE(players.tff , \"0\")  from players left outer join stats on players.stat_id = stats.id where note like \"sab: %\" group by players.id  order by stats.id DESC")
 	defer rows.Close()
 	if err != nil {
 		panic(err.Error())
@@ -884,8 +906,9 @@ func allSabList() *[]model.Player {
 		var da string
 		var sp string
 		var se string
-		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se)
-		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp}
+		var tff string
+		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff)
+		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff}
 		counter++
 	}
 
