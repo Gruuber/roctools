@@ -2,11 +2,11 @@
 // @name        SPLoP's little helper
 // @namespace   roc.splopi.beaver
 // @description SPLoP's little helper, the better name by Jellybean
-// @include     https://ruinsofchaos.com/*
-// @exclude     https://ruinsofchaos.com/index.php*
-// @exclude     https://ruinsofchaos.com/register.php*
-// @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.07.2
+// @include     https://*ruinsofchaos.com/*
+// @exclude     https://*ruinsofchaos.com/index.php*
+// @exclude     https://*ruinsofchaos.com/register.php*
+// @exclude     https://*ruinsofchaos.com/forgotpass.php*
+// @version     1.07.3
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
