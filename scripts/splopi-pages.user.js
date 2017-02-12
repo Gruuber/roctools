@@ -533,11 +533,14 @@
 
 	function stats() {
 		var tff = 0;
-		if($(".sep.f").eq(0).find("tr").eq(5).find("td").eq(0).html() === "<b>Fort:</b>"){
-			tff = $(".sep.f").eq(0).find("tr").eq(6).find("td").eq(1).html().split(" ")[0].split(",").join("");
-		}else{
-			tff = $(".sep.f").eq(0).find("tr").eq(5).find("td").eq(1).html().split(" ")[0].split(",").join("");
+		//Search for the size
+		for (var x = 0 ; x < $(".sep.f").eq(0).find("tr").length ; x++ ){
+			if($(".sep.f").eq(0).find("tr").eq(x).find("td").eq(0).html() === "<b>Size:</b>"){
+				tff = $(".sep.f").eq(0).find("tr").eq(x).find("td").eq(1).html().split(" ")[0].split(",").join("");
+			}
 		}
+		
+		
 		var name = $(".sep.f").eq(0).find("tr").eq(0).find("th").html();
 		
 		var pageURL = window.location.href;
