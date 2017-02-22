@@ -40,6 +40,7 @@ func main() {
 
 // [START func_sign]
 func sign(w http.ResponseWriter, r *http.Request) {
+	println("Reach signin")
 	db = getDBconnection()
 	//Close database connection at the end
 	defer db.Close()
@@ -235,6 +236,7 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var troopStr = r.Form["troops"][0]
 	var userID = r.Form["user_id"][0]
 	var weaponStr = r.Form["weapons"][0]
 	var sa = r.Form["sa"][0]
@@ -270,11 +272,15 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 		}
 
 		weaponsBody := []byte(weaponStr)
+		troopsBody := []byte(troopStr)
 		weapons := make([]model.Weapon, 0)
+		troops := make([]model.Troop, 0)
+
 		json.Unmarshal(weaponsBody, &weapons)
+		json.Unmarshal(troopsBody, &troops)
 
 		preWeaponStr, err := getLastSOV(playerID)
-
+		var defenseQuantity int
 		if err == nil {
 			//We combine the 2 sells
 			preWBody := []byte(preWeaponStr)
@@ -300,6 +306,9 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 							if elem.Type == unknownVal {
 								elem.Type = preEl.Type
 							}
+							if elem.Type == "Defense" {
+								defenseQuantity += elem.Quantity
+							}
 							break
 						}
 					}
@@ -309,19 +318,188 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 
 		//Now we attempt to calculate the current SOV
 		sov := 0
+
 		for _, elem := range weapons {
 			sov += getItemSOV(elem)
+
 		}
+
+		//Now we calculate the player "battle force"
+		var isTrained string
+		var isHolding string
+		var untrained int
+		var battleForce int
+		pAttackSoldiers, pAttackMercs, pDefenseSoldiers, pDefenseMercs, pUntrainedSoldiers, pUntrainedMercs, pSpies, pSentries, err := getLastTroops(playerID)
+
+		for _, elem := range troops {
+
+			if elem.AttackSoldiers == -1 {
+				if pAttackSoldiers > 0 {
+					elem.AttackSoldiers = pAttackSoldiers
+				}
+			}
+			if elem.AttackMercs == -1 {
+				if pAttackMercs > 0 {
+					elem.AttackMercs = pAttackMercs
+				}
+			}
+			if elem.DefenseSoldiers == -1 {
+				if pDefenseSoldiers > 0 {
+					elem.DefenseSoldiers = pDefenseSoldiers
+				}
+			}
+			if elem.DefenseMercs == -1 {
+				if pDefenseMercs > 0 {
+					elem.DefenseMercs = pDefenseMercs
+				}
+			}
+			if elem.UntrainedSoldiers == -1 {
+				if pUntrainedSoldiers > 0 {
+					elem.UntrainedSoldiers = pUntrainedSoldiers
+				}
+			}
+			if elem.UntrainedMercs == -1 {
+				if pUntrainedMercs > 0 {
+					elem.UntrainedMercs = pUntrainedMercs
+				}
+			}
+			if elem.Spies == -1 {
+				if pSpies > 0 {
+					elem.Spies = pSpies
+				}
+			}
+			if elem.Sentries == -1 {
+				if pSentries > 0 {
+					elem.Sentries = pSentries
+				}
+			}
+
+			battleForce = elem.DefenseSoldiers + elem.DefenseMercs + elem.UntrainedSoldiers + elem.UntrainedMercs
+			untrained = elem.UntrainedSoldiers + elem.UntrainedMercs
+
+			if battleForce/2 > untrained {
+				isTrained = "yes"
+			} else {
+				isTrained = "no"
+			}
+
+			if battleForce/2 > defenseQuantity {
+				isHolding = "no"
+			} else {
+				isHolding = "yes"
+			}
+
+			err = saveTroops(playerID, battleForce, isTrained, isHolding, elem.AttackSoldiers, elem.AttackMercs, elem.DefenseSoldiers, elem.DefenseMercs, elem.UntrainedSoldiers, elem.UntrainedMercs, elem.Spies, elem.Sentries)
+		}
+
+		//
+
+		/*
+			for _, elem := range troops {
+
+				if elem.TroopType == "DefenseSoldiers" {
+					if elem.TroopCount == 0 {
+						if pDefenseSoldiers > 0 {
+							defenseSoldiers = pDefenseSoldiers
+							battleForce += pDefenseSoldiers
+						}
+					} else {
+						battleForce += elem.TroopCount
+						defenseSoldiers = elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "DefenseMercenaries" {
+					if elem.TroopCount < 0 {
+						if pDefenseMercs > -1 {
+							defenseMercs = pDefenseMercs
+							battleForce += pDefenseMercs
+						}
+					} else {
+						battleForce += elem.TroopCount
+						defenseMercs = elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "AttackSoldiers" {
+					if elem.TroopCount < 0 {
+						if pAttackSoldiers > -1 {
+							attackSoldiers = pAttackSoldiers
+						}
+					} else {
+						attackSoldiers = elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "AttackMercenaries" {
+					if elem.TroopCount < 0 {
+						if pAttackMercs > -1 {
+							attackMercs = pAttackMercs
+						}
+					} else {
+						attackMercs = elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "UntrainedSoldiers" {
+					if elem.TroopCount < 0 {
+						if pUntrainedSoldiers > -1 {
+							untrainedSoldiers = pUntrainedSoldiers
+							battleForce += pUntrainedSoldiers
+							untrained += pUntrainedSoldiers
+						}
+					} else {
+						battleForce += elem.TroopCount
+						untrainedSoldiers = elem.TroopCount
+						untrained += elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "UntrainedMercenaries" {
+					if elem.TroopCount < 0 {
+						if pUntrainedMercs > -1 {
+							untrainedMercs = pUntrainedMercs
+							battleForce += pUntrainedMercs
+							untrained += pUntrainedMercs
+						}
+					} else {
+						battleForce += elem.TroopCount
+						untrainedMercs = elem.TroopCount
+						untrained += elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "Spies" {
+					if elem.TroopCount < 0 {
+						if pSpies > -1 {
+							spies = pSpies
+						}
+					} else {
+						spies = elem.TroopCount
+					}
+				}
+
+				if elem.TroopType == "Sentries" {
+					if elem.TroopCount < 0 {
+						if pSentries > -1 {
+							sentries = pSentries
+						}
+					} else {
+						sentries = elem.TroopCount
+					}
+				}
+			}*/
 
 		err = saveSOV(playerID, sov, weapons)
 
 		if err != nil {
+			println("test")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		fmt.Fprint(w, "SUCCESS")
-	} else {
+
 		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprint(w, "You are not authorized to perform this action")
 		return
@@ -569,7 +747,7 @@ func getAllNonAdminUsers() *[]model.UserEntry {
 }
 
 func getDBconnection() *sql.DB {
-	database, err := sql.Open("mysql", "gouser:hireme@tcp(127.0.0.1:3306)/splop")
+	database, err := sql.Open("mysql", "Gruuber:jiggyph00@tcp(127.0.0.1:3306)/splop")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -708,11 +886,49 @@ func getItemSOV(wep model.Weapon) int {
 	return sov
 }
 
+func getLastTroops(playerID int) (int, int, int, int, int, int, int, int, error) {
+	attackSoldiers := 0
+	attackMercs := 0
+	defenseSoldiers := 0
+	defenseMercs := 0
+	untrainedSoldiers := 0
+	untrainedMercs := 0
+	spies := 0
+	sentries := 0
+
+	db = getDBconnection()
+	stmt, err := db.Prepare("select attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries from troops where player_id = (?) order by id DESC  limit 1")
+	if err != nil {
+		log.Fatal(err)
+		return attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, err
+	}
+
+	defer db.Close()
+	defer stmt.Close()
+
+	rows, err := stmt.Query(playerID)
+	if err != nil {
+		log.Fatal(err)
+		return attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, err
+	}
+
+	if rows.Next() {
+		err = rows.Scan(&attackSoldiers, &attackMercs, &defenseSoldiers, &defenseMercs, &untrainedSoldiers, &untrainedMercs, &spies, &sentries)
+		if err != nil {
+			println("test")
+			log.Fatal(err)
+			return attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, err
+		}
+		return attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, nil
+	}
+	return attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, errors.New("Sov string not found")
+}
+
 func saveSOV(playerID int, sov int, w []model.Weapon) error {
 	db = getDBconnection()
 	defer db.Close()
 	//Weapons part
-	stmt, err := db.Prepare("insert into weapons (player_id , value , date) values ( (?) , (?) , NOW() )")
+	stmt, err := db.Prepare("insert into weapons (player_id , value ,  date) values ( (?) , (?) , NOW() )")
 	defer stmt.Close()
 	if err != nil {
 		return err
@@ -755,6 +971,46 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 
 	_, err = stmt.Exec(int(sovID), int(weaponsID), playerID)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func saveTroops(playerID int, troops int, isTrained string, holding string, attackSoldiers int, attackMercs int, defenseSoldiers int, defenseMercs int, untrainedSoldiers int, untrainedMercs int, spies int, sentries int) error {
+	db = getDBconnection()
+	defer db.Close()
+	println("before prepare")
+	println(attackSoldiers)
+	println(attackMercs)
+	stmt, err := db.Prepare("insert into troops (player_id , value , isTrained, isHolding, attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, date) values ( (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , NOW() )")
+	defer stmt.Close()
+	if err != nil {
+
+		return err
+	}
+	res, err := stmt.Exec(playerID, troops, isTrained, holding, int(attackSoldiers), attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries)
+	if err != nil {
+
+		return err
+	}
+	troopsID, err := res.LastInsertId()
+	if err != nil {
+
+		return err
+	}
+	//End weapons part
+
+	//Update user
+	stmt, err = db.Prepare("UPDATE players set troop_id = (?) , lastupdated = NOW() where id = (?)")
+	if err != nil {
+
+		return err
+	}
+
+	_, err = stmt.Exec(int(troopsID), playerID)
+	if err != nil {
+
 		return err
 	}
 
@@ -889,7 +1145,7 @@ func allSabList() *[]model.Player {
 		err = rows.Scan(&count)
 	}
 
-	rows, err = db.Query("select players.external_player_id , players.name , players.note , COALESCE(stats.sa , \"???\") , COALESCE(stats.da , \"???\") , COALESCE(stats.sp,\"???\") , COALESCE(stats.se , \"???\") , COALESCE(players.tff , \"0\")  from players left outer join stats on players.stat_id = stats.id where note like \"sab: %\" group by players.id  order by stats.id DESC")
+	rows, err = db.Query("select players.external_player_id ,  players.name  ,  players.note , COALESCE( stats.sa , \"???\") , COALESCE( stats.da , \"???\") , COALESCE( stats.sp,\"???\") , COALESCE( stats.se , \"???\") , COALESCE( players.tff , \"0\") ,  troops.value , troops.isHolding , troops.isTrained , troops.untrainedMercs , troops.defenseMercs , troops.spies , troops.sentries  from  players left outer join  stats on  players.stat_id =  stats.id left outer join  troops on  players.troop_id =  troops.id  where note like \"sab: %\" group by  players.id")
 	defer rows.Close()
 	if err != nil {
 		panic(err.Error())
@@ -901,16 +1157,34 @@ func allSabList() *[]model.Player {
 	for rows.Next() {
 		var externalID int
 		var name string
+		var battleForce int
 		var note string
 		var sa string
 		var da string
 		var sp string
 		var se string
 		var tff string
-		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff)
-		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff}
-		counter++
-	}
+		var isHolding string
+		var isTrained string
+		var untrainedMercs int
+		var defenseMercs int
+		var spies int
+		var sentries int
+		var totalMercs int
+		var totalCoverts int
 
+		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff, &battleForce, &isHolding, &isTrained, &untrainedMercs, &defenseMercs, &spies, &sentries)
+
+		totalMercs = untrainedMercs + defenseMercs
+		totalCoverts = spies + sentries
+		if isHolding == "" || isTrained == "" {
+			isHolding = "No Data"
+			isTrained = "No Data"
+		}
+
+		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff, BattleForce: battleForce, IsHolding: isHolding, IsTrained: isTrained, TotalMercs: totalMercs, TotalCoverts: totalCoverts}
+		counter++
+
+	}
 	return &playerEntries
 }
