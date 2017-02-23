@@ -493,15 +493,11 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 		err = saveSOV(playerID, sov, weapons)
 
 		if err != nil {
-			println("test")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		fmt.Fprint(w, "SUCCESS")
-
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "You are not authorized to perform this action")
 		return
 	}
 }
@@ -747,7 +743,7 @@ func getAllNonAdminUsers() *[]model.UserEntry {
 }
 
 func getDBconnection() *sql.DB {
-	database, err := sql.Open("mysql", "Gruuber:jiggyph00@tcp(127.0.0.1:3306)/splop")
+	database, err := sql.Open("mysql", "gouser:hireme@tcp(127.0.0.1:3306)/splop")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -980,9 +976,6 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 func saveTroops(playerID int, troops int, isTrained string, holding string, attackSoldiers int, attackMercs int, defenseSoldiers int, defenseMercs int, untrainedSoldiers int, untrainedMercs int, spies int, sentries int) error {
 	db = getDBconnection()
 	defer db.Close()
-	println("before prepare")
-	println(attackSoldiers)
-	println(attackMercs)
 	stmt, err := db.Prepare("insert into troops (player_id , value , isTrained, isHolding, attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, date) values ( (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , NOW() )")
 	defer stmt.Close()
 	if err != nil {

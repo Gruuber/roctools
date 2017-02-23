@@ -2,11 +2,11 @@
 // @name        SPLoP's little helper
 // @namespace   roc.splopi.beaver
 // @description SPLoP's little helper, the better name by Jellybean
-// @include     https://ruinsofchaos.com/*
-// @exclude     https://ruinsofchaos.com/index.php*
-// @exclude     https://ruinsofchaos.com/register.php*
-// @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.07.2
+// @include     https://*ruinsofchaos.com/*
+// @exclude     https://*ruinsofchaos.com/index.php*
+// @exclude     https://*ruinsofchaos.com/register.php*
+// @exclude     https://*ruinsofchaos.com/forgotpass.php*
+// @version     1.08.01
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -42,8 +42,8 @@
 		addMenuPages();
 	}
 
-	//var bbScriptServer = "http://52.10.254.235:8080";
-	var bbScriptServer = "http://127.0.0.1:8080";
+	var bbScriptServer = "http://52.10.254.235:8080";
+	//var bbScriptServer = "http://127.0.0.1:8080";
 
 	var scriptName = "SPLoP's little helper";
 	var url = document.location.toString();
@@ -764,7 +764,7 @@
 		var headerTr = document.createElement("tr");
 		var headerTd = document.createElement("td");
 		headerTd.innerHTML = "APPROVED SAB LIST";
-		headerTd.setAttribute("colspan", "8");
+		headerTd.setAttribute("colspan", "9");
 		headerTd.setAttribute("class", "th topcap");
 		headerTr.appendChild(headerTd);
 		sabTable.appendChild(headerTr);
@@ -778,10 +778,10 @@
 		tffTd.innerHTML = "<b>Tff</b>";
 
 		var bfTd = document.createElement("td");
-		bfTd.innerHTML = "<b>Casualties per attack (x2 if banzai)</b>";
+		bfTd.innerHTML = "<b>Casualties/attack</b>";
 
 		var tctmTd = document.createElement("td");
-		tctmTd.innerHTML = "<b>Total Mercs/Total Coverts</b>";
+		tctmTd.innerHTML = "<b>Mercs/Coverts</b>";
 
 		var seTd = document.createElement("td");
 		seTd.innerHTML = "<b>Sentry</b>";
@@ -847,27 +847,34 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
-			tdBf.innerHTML = userObj.BattleForce * .03;
+			var banzai = userObj.BattleForce * .03;
+			var regular = userObj.BattleForce * .015;
+
+			
 
 			var tdTctm = document.createElement("td");
 			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs + "<br>" + "Coverts: " + userObj.TotalCoverts;
 
 
 			if (userObj.IsHolding == "yes"){
-				tdBf.innerHTML *= .5;
+				banzai *= 0.5;
+				regular *= 0.5;
 			}
 
 			if (userObj.IsTrained == "yes"){
-				tdBf.innerHTML *= .5;
+				banzai *= 0.5;
+				regular *= 0.5;
 			}
 
-		  tdBf.innerHTML = Math.round(tdBf.innerHTML);
+			banzai = Math.round(banzai);
+			regular = Math.round(regular);
 
+			
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
 
-
+			tdBf.innerHTML = "Banzai: " + banzai.toLocaleString() + "<br>" + "No event: " + regular.toLocaleString();
 
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
