@@ -506,6 +506,52 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func storeUserStats(w http.ResponseWriter, r *http.Request) {
+	println("in storeUserStats")
+	/*r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	var sa = r.Form["sa"][0]
+	var da = r.Form["da"][0]
+	var sp = r.Form["sp"][0]
+	var se = r.Form["se"][0]
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
+		playerID := getPlayerID(externalID)
+
+		println("before saveStats")
+		err = saveStats(playerID, sa, da, sp, se)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if playerID == -1 {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}*/
+}
+
 func getplayerpage(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
