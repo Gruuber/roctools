@@ -17,6 +17,7 @@
 // @require 	https://code.jquery.com/jquery-2.2.4.min.js
 // ==/UserScript==
 
+
 (function () {
 	var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 	if (isChrome) {
@@ -49,6 +50,8 @@
 	var url = document.location.toString();
 
 	var sabListArr = [];
+	var userStats = [];
+
 
 	var BB_username = GM_getValue("BB_username", "");
 	var BB_password = GM_getValue("BB_password", "");
@@ -106,12 +109,32 @@
 			inteldetail();
 		} else if (url.indexOf("/stats.php") > 0) {
 			stats();
+		} else if (url.indexOf("/base.php") > 0) {
+			getUserStats();
 		}
 	}
 
 	function getSabList(){
 		var lolcontent = document.getElementById("lolcontent");
 		lolcontent.innerHTML = "GETTING WAR DATA!!!!";
+
+				GM_xmlhttpRequest({
+
+			method: "POST",
+			headers: {
+				'Content-type': 'application/x-www-form-urlencoded'
+			},
+			data: encodeURI("external_id=" + BB_statid),
+			url: bbScriptServer + "/roc/getuserstats",
+			onload: function (r) {
+				if (r.status == 200) {
+
+					  userStats = JSON.parse(r.responseText);
+
+
+				}
+			}
+		});
 
 		GM_xmlhttpRequest({
 
@@ -137,6 +160,8 @@
 				}
 			}
 		});
+
+
 
 	}
 
@@ -764,7 +789,7 @@
 		var headerTr = document.createElement("tr");
 		var headerTd = document.createElement("td");
 		headerTd.innerHTML = "APPROVED SAB LIST";
-		headerTd.setAttribute("colspan", "8");
+		headerTd.setAttribute("colspan", "9");
 		headerTd.setAttribute("class", "th topcap");
 		headerTr.appendChild(headerTd);
 		sabTable.appendChild(headerTr);
@@ -778,10 +803,10 @@
 		tffTd.innerHTML = "<b>Tff</b>";
 
 		var bfTd = document.createElement("td");
-		bfTd.innerHTML = "<b>Casualties per attack (x2 if banzai)</b>";
+		bfTd.innerHTML = "<b>Casualties/attack</b>";
 
 		var tctmTd = document.createElement("td");
-		tctmTd.innerHTML = "<b>Total Mercs/Total Coverts</b>";
+		tctmTd.innerHTML = "<b>Mercs/Coverts</b>";
 
 		var seTd = document.createElement("td");
 		seTd.innerHTML = "<b>Sentry</b>";
@@ -819,8 +844,13 @@
 
 		var counter = 0;
 
+
 		for (var index = 0; index < sabListArr.length; index++) {
+
 			userObj = sabListArr[index];
+			console.log(parseInt(replaceAll(userStats.Sa , "," , "")));
+
+
 
 
 			var tr = document.createElement("tr");
@@ -847,27 +877,59 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
-			tdBf.innerHTML = userObj.BattleForce * .03;
+			var banzai = userObj.BattleForce * .03;
+			var regular = userObj.BattleForce * .015;
+
+
 
 			var tdTctm = document.createElement("td");
 			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs + "<br>" + "Coverts: " + userObj.TotalCoverts;
 
 
 			if (userObj.IsHolding == "yes"){
-				tdBf.innerHTML *= .5;
+				banzai *= 0.5;
+				regular *= 0.5;
 			}
 
 			if (userObj.IsTrained == "yes"){
-				tdBf.innerHTML *= .5;
+				banzai *= 0.5;
+				regular *= 0.5;
 			}
 
-		  tdBf.innerHTML = Math.round(tdBf.innerHTML);
+			banzai = Math.round(banzai);
+			regular = Math.round(regular);
+
+			var massers = 1;
+
+			if(banzai*5 > userObj.TotalMercs/massers){
+				tr.setAttribute("style","background-color:#ff6666");
+			}
+
 
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
 
 
+			var saDaRatio = (parseInt(replaceAll(userStats.Sa , "," , ""))/userObj.Da);
+			if (saDaRatio > 10){
+				saDaRatio = 10;
+			}
+			var spyCas = (userObj.Spies*.0002)*(Math.floor(saDaRatio));
+			var sentryCas = (userObj.Sentries*.0002)*(Math.floor(saDaRatio));
+			console.log(spyCas);
+			console.log(sentryCas);
+
+			if (userObj.SpyIsHolding == "no"){
+				spyCas *= 2;
+			}
+			if (userObj.SentryIsHolding == "no"){
+				sentryCas *= 2;
+			}
+
+
+			var covertCasualties = Math.round(spyCas + sentryCas);
+			tdBf.innerHTML = "Soldiers: " + regular.toLocaleString() + "<br>" + "Coverts: " + covertCasualties.toLocaleString();
 
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
@@ -893,6 +955,45 @@
 		lolcontent.innerHTML = "";
 		lolcontent.appendChild(sabTable);
 
+	}
+
+	function getUserStats(){
+
+		var tables = $(".sep.f");
+		var index = -1;
+		for ( var i = 0 ; i < tables.length ; i++ ){
+			var th = $(".sep.f").eq(i).find("tr").eq(0).find("th").eq(0).html();
+			if( th === "Your Stats"){
+				index = i;
+				break;
+			}
+		}
+
+		var sa = $(".sep.f").eq(index).find("tr").eq(1).find("td").eq(1).html();
+		var da = $(".sep.f").eq(index).find("tr").eq(2).find("td").eq(1).html();
+		var sp = $(".sep.f").eq(index).find("tr").eq(3).find("td").eq(1).html();
+		var se = $(".sep.f").eq(index).find("tr").eq(4).find("td").eq(1).html();
+
+		console.log(sa);
+		console.log(da);
+		console.log(sp);
+		console.log(se);
+
+		console.log(bbScriptServer);
+		console.log(BB_statid);
+		GM_xmlhttpRequest({
+			method: "POST",
+			headers: {
+				'Content-type': 'application/x-www-form-urlencoded'
+			},
+			data: encodeURI("external_id="+ BB_statid + "&sa=" + sa + "&da=" + da + "&sp=" + sp + "&se=" + se ),
+			url: bbScriptServer + "/roc/storeuserstats",
+			onload: function (r) {
+				//Do nothing
+			}
+		});
+
+		console.log("after storeUserStats request");
 	}
 
 	function reloadSablist(type){
