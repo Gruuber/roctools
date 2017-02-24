@@ -17,7 +17,6 @@
 // @require 	https://code.jquery.com/jquery-2.2.4.min.js
 // ==/UserScript==
 
-
 (function () {
 	var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 	if (isChrome) {
@@ -856,7 +855,10 @@
 			var tr = document.createElement("tr");
 
 			var tdName = document.createElement("td");
-			tdName.innerHTML = '<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=recon" target="_blank">'+userObj.Name+'</a>';
+			tdName.innerHTML = '<a href="https://ruinsofchaos.com/stats.php?id='+userObj.ExternalID+'"target="_blank">'+userObj.Name+'</a><br>';
+			tdName.innerHTML +='<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=recon"target="_blank">RECON</a>';
+			tdName.innerHTML +='<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=probe"target="_blank">&nbsp&nbsp&nbspPROBE</a>';
+			
 
 			var tdNote = document.createElement("td");
 			tdNote.innerHTML = getSabLinks(userObj.Note , userObj.Name);
@@ -877,8 +879,7 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
-			var banzai = userObj.BattleForce * .03;
-			var regular = userObj.BattleForce * .015;
+			var soldierCas = userObj.BattleForce * .03;
 
 			
 
@@ -887,17 +888,15 @@
 
 
 			if (userObj.IsHolding == "yes"){
-				banzai *= 0.5;
-				regular *= 0.5;
+			  soldierCas *= .5;
 			}
 
 			if (userObj.IsTrained == "yes"){
-				banzai *= 0.5;
-				regular *= 0.5;
+				soldierCas *= .5;
 			}
 
-			banzai = Math.round(banzai);
-			regular = Math.round(regular);
+			
+			soldierCas = Math.round(soldierCas);
 			
 			var massers = 1;
 			
@@ -915,8 +914,6 @@
 			}
 			var spyCas = (userObj.Spies*.0002)*(Math.floor(saDaRatio));
 			var sentryCas = (userObj.Sentries*.0002)*(Math.floor(saDaRatio));
-			console.log(spyCas);
-			console.log(sentryCas);
 			
 			if (userObj.SpyIsHolding == "no"){
 				spyCas *= 2;
@@ -927,10 +924,14 @@
 			
 			
 			var covertCasualties = Math.round(spyCas + sentryCas);
-			tdBf.innerHTML = "Soldiers: " + regular.toLocaleString() + "<br>" + "Coverts: " + covertCasualties.toLocaleString();
+			tdBf.innerHTML = "Soldiers: " + soldierCas.toLocaleString() + "<br>" + "Coverts: " + covertCasualties.toLocaleString();
 			
-			if(banzai*5 > userObj.TotalMercs/massers || covertCasualties > 2500){
+			if(soldierCas*10 > userObj.TotalMercs/massers || covertCasualties > 2500){
 				tdBf.setAttribute("style","background-color:#ff6666");
+			}
+			if((parseInt(replaceAll(userStats.Sp , "," , "")))*1.2 / userObj.Se > .5){
+			
+				tdSE.setAttribute("style","background-color:#33cc33");
 			}
 
 			tr.appendChild(tdName);
@@ -1014,4 +1015,5 @@
 	}
 
 })()
+
 
