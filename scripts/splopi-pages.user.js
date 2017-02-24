@@ -51,7 +51,7 @@
 
 	var sabListArr = [];
 	var userStats = [];
-
+	
 
 	var BB_username = GM_getValue("BB_username", "");
 	var BB_password = GM_getValue("BB_password", "");
@@ -117,7 +117,7 @@
 	function getSabList(){
 		var lolcontent = document.getElementById("lolcontent");
 		lolcontent.innerHTML = "GETTING WAR DATA!!!!";
-
+		
 				GM_xmlhttpRequest({
 
 			method: "POST",
@@ -130,7 +130,7 @@
 				if (r.status == 200) {
 
 					  userStats = JSON.parse(r.responseText);
-
+			
 
 				}
 			}
@@ -160,7 +160,7 @@
 				}
 			}
 		});
-
+		
 
 
 	}
@@ -843,14 +843,14 @@
 		sabTable.appendChild(listTr);
 
 		var counter = 0;
-
+		
 
 		for (var index = 0; index < sabListArr.length; index++) {
-
+			
 			userObj = sabListArr[index];
 			console.log(parseInt(replaceAll(userStats.Sa , "," , "")));
-
-
+			
+			
 
 
 			var tr = document.createElement("tr");
@@ -880,10 +880,10 @@
 			var banzai = userObj.BattleForce * .03;
 			var regular = userObj.BattleForce * .015;
 
-
+			
 
 			var tdTctm = document.createElement("td");
-			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs + "<br>" + "Coverts: " + userObj.TotalCoverts;
+			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs.toLocaleString() + "<br>" + "Coverts: " + userObj.TotalCoverts.toLocaleString();
 
 
 			if (userObj.IsHolding == "yes"){
@@ -898,19 +898,17 @@
 
 			banzai = Math.round(banzai);
 			regular = Math.round(regular);
-
+			
 			var massers = 1;
+			
+			
 
-			if(banzai*5 > userObj.TotalMercs/massers){
-				tr.setAttribute("style","background-color:#ff6666");
-			}
-
-
+			
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
 
-
+			
 			var saDaRatio = (parseInt(replaceAll(userStats.Sa , "," , ""))/userObj.Da);
 			if (saDaRatio > 10){
 				saDaRatio = 10;
@@ -919,17 +917,21 @@
 			var sentryCas = (userObj.Sentries*.0002)*(Math.floor(saDaRatio));
 			console.log(spyCas);
 			console.log(sentryCas);
-
+			
 			if (userObj.SpyIsHolding == "no"){
 				spyCas *= 2;
 			}
 			if (userObj.SentryIsHolding == "no"){
 				sentryCas *= 2;
 			}
-
-
+			
+			
 			var covertCasualties = Math.round(spyCas + sentryCas);
 			tdBf.innerHTML = "Soldiers: " + regular.toLocaleString() + "<br>" + "Coverts: " + covertCasualties.toLocaleString();
+			
+			if(banzai*5 > userObj.TotalMercs/massers || covertCasualties > 2500){
+				tdBf.setAttribute("style","background-color:#ff6666");
+			}
 
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
@@ -956,9 +958,9 @@
 		lolcontent.appendChild(sabTable);
 
 	}
-
+	
 	function getUserStats(){
-
+		
 		var tables = $(".sep.f");
 		var index = -1;
 		for ( var i = 0 ; i < tables.length ; i++ ){
@@ -973,12 +975,12 @@
 		var da = $(".sep.f").eq(index).find("tr").eq(2).find("td").eq(1).html();
 		var sp = $(".sep.f").eq(index).find("tr").eq(3).find("td").eq(1).html();
 		var se = $(".sep.f").eq(index).find("tr").eq(4).find("td").eq(1).html();
-
+		
 		console.log(sa);
 		console.log(da);
 		console.log(sp);
 		console.log(se);
-
+		
 		console.log(bbScriptServer);
 		console.log(BB_statid);
 		GM_xmlhttpRequest({
@@ -1012,3 +1014,4 @@
 	}
 
 })()
+
