@@ -6,7 +6,7 @@
 // @exclude     https://*ruinsofchaos.com/index.php*
 // @exclude     https://*ruinsofchaos.com/register.php*
 // @exclude     https://*ruinsofchaos.com/forgotpass.php*
-// @version     1.08.02
+// @version     1.08.03
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -873,6 +873,8 @@
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
+			
+			tdBf.innerHTML = "Banzai: " + banzai.toLocaleString() + "<br>" + "No event: " + regular.toLocaleString();
 
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
