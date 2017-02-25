@@ -6,7 +6,7 @@
 // @exclude     https://*ruinsofchaos.com/index.php*
 // @exclude     https://*ruinsofchaos.com/register.php*
 // @exclude     https://*ruinsofchaos.com/forgotpass.php*
-// @version     1.08.01
+// @version     1.08.02
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -72,8 +72,8 @@
 	//Check if user is logged in before loading the scripts
 	loadBBPage();
 
-	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; }");
-
+	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; } .banzaientryeven{background : #401818}    .banzaientryodd{background : #311010}");
+	
 	function addMenuPages() {
 		var bbMenu = $("<a class=\"bbMenu\" alt=\"SPLoP's little helper\" href=\"base.php?bbpage=profile\"><span>VERY UGLY BUTTON</span></a>");
 		var intelMenu = $("#menubar .menu7");
@@ -874,8 +874,6 @@
 				tdBf.innerHTML = "Need Recon";
 			}
 
-			tdBf.innerHTML = "Banzai: " + banzai.toLocaleString() + "<br>" + "No event: " + regular.toLocaleString();
-
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
 			tr.appendChild(tdTFF);
@@ -886,12 +884,18 @@
 			tr.appendChild(tdSA);
 			tr.appendChild(tdSP);
 
-
-
 			if (counter % 2 == 0) {
-				tr.setAttribute("class", "even sabentry");
+				if(banzai*5 > userObj.TotalMercs){
+					tr.setAttribute("class", "even sabentry banzaientryeven");
+				}else{
+					tr.setAttribute("class", "even sabentry");
+				}
 			} else {
-				tr.setAttribute("class", "odd sabentry");
+				if(banzai*5 > userObj.TotalMercs){
+					tr.setAttribute("class", "odd sabentry banzaientryodd");
+				}else{
+					tr.setAttribute("class", "odd sabentry");
+				}
 			}
 			sabTable.appendChild(tr);
 			counter++;
