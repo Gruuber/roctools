@@ -17,6 +17,7 @@
 // @require 	https://code.jquery.com/jquery-2.2.4.min.js
 // ==/UserScript==
 
+
 (function () {
 	var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 	if (isChrome) {
@@ -879,7 +880,9 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
+
 			var soldierCas = userObj.BattleForce * .03;
+
 
 			
 
@@ -888,6 +891,7 @@
 
 
 			if (userObj.IsHolding == "yes"){
+
 			  soldierCas *= .5;
 			}
 
@@ -899,14 +903,11 @@
 			soldierCas = Math.round(soldierCas);
 			
 			var massers = 1;
-			
-			
 
 			
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
-
 			
 			var saDaRatio = (parseInt(replaceAll(userStats.Sa , "," , ""))/userObj.Da);
 			if (saDaRatio > 10){
@@ -982,15 +983,15 @@
 		console.log(sp);
 		console.log(se);
 		
-		console.log(bbScriptServer);
-		console.log(BB_statid);
 		GM_xmlhttpRequest({
 			method: "POST",
 			headers: {
 				'Content-type': 'application/x-www-form-urlencoded'
 			},
 			data: encodeURI("external_id="+ BB_statid + "&sa=" + sa + "&da=" + da + "&sp=" + sp + "&se=" + se ),
+
 			url: bbScriptServer + "/roc/storeuserstats",
+
 			onload: function (r) {
 				//Do nothing
 			}
