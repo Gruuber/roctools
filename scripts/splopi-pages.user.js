@@ -6,7 +6,7 @@
 // @exclude     https://*ruinsofchaos.com/index.php*
 // @exclude     https://*ruinsofchaos.com/register.php*
 // @exclude     https://*ruinsofchaos.com/forgotpass.php*
-// @version     1.08.03
+// @version     1.09.01
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -16,6 +16,7 @@
 // @grant 		  GM_log
 // @require 	https://code.jquery.com/jquery-2.2.4.min.js
 // ==/UserScript==
+
 
 (function () {
 	var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
@@ -49,6 +50,8 @@
 	var url = document.location.toString();
 
 	var sabListArr = [];
+	var userStats = [];
+	
 
 	var BB_username = GM_getValue("BB_username", "");
 	var BB_password = GM_getValue("BB_password", "");
@@ -72,7 +75,7 @@
 	//Check if user is logged in before loading the scripts
 	loadBBPage();
 
-	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; } .banzaientryeven{background : #401818}    .banzaientryodd{background : #311010}");
+	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; } .masseven{background : #401818}    .massodd{background : #311010} .sabodd{background : #103110} .sabeven{background : #184018} .displayNone{display : none} .controlBox > label{display : inline-block ; margin : 0 15px 0 0;}");
 	
 	function addMenuPages() {
 		var bbMenu = $("<a class=\"bbMenu\" alt=\"SPLoP's little helper\" href=\"base.php?bbpage=profile\"><span>VERY UGLY BUTTON</span></a>");
@@ -106,14 +109,34 @@
 			inteldetail();
 		} else if (url.indexOf("/stats.php") > 0) {
 			stats();
+		} else if (url.indexOf("/base.php") > 0) {
+			getUserStats();
 		}
 	}
 
 	function getSabList(){
 		var lolcontent = document.getElementById("lolcontent");
 		lolcontent.innerHTML = "GETTING WAR DATA!!!!";
-
+		
 		GM_xmlhttpRequest({
+
+			method: "POST",
+			headers: {
+				'Content-type': 'application/x-www-form-urlencoded'
+			},
+			data: encodeURI("external_id=" + BB_statid),
+			url: bbScriptServer + "/roc/getuserstats",
+			onload: function (r) {
+				if (r.status == 200) {
+					userStats = JSON.parse(r.responseText);
+					getSabListCallBack();
+				}
+			}
+		});
+	}
+	
+	function getSabListCallBack(){
+			GM_xmlhttpRequest({
 
 			method: "POST",
 			headers: {
@@ -123,21 +146,13 @@
 			url: bbScriptServer + "/roc/getsablist",
 			onload: function (r) {
 				if (r.status == 200) {
-
 					var playerArray = JSON.parse(r.responseText);
-			console.log(playerArray);
-					 sabListArr = prepareSabList(playerArray);
-
-
-
-
+					sabListArr = prepareSabList(playerArray);
 					orderSabList("Tff");
 					loadSabList();
-
 				}
 			}
 		});
-
 	}
 
 	function orderSabList(type){
@@ -607,12 +622,6 @@
 				}
 			}
 
-
-
-
-
-
-
 		});
 
 		var troop = {
@@ -628,9 +637,6 @@
 				//Add that object to the weapon array
 
 		troopsArray.push(troop);
-		console.log(troopsArray);
-
-
 
 		var webSTR = JSON.stringify(weaponsArray);
     var webSTR2 = JSON.stringify(troopsArray);
@@ -753,9 +759,79 @@
 	function replaceAll(target, search, replacement) {
 		return target.split(search).join(replacement);
 	};
+	
+	function createControlBox(){
+		var controlDiv = $("<div class=\"controlBox\" />");
+		
+		var hideSabItems = $("<input type=\"checkbox\" checked>");
+		hideSabItems.bind("change" , hideColumn.bind( hideSabItems , "sabItemsTD"));
+		var sabItemLabel = $("<label>Sab Items:</label>");
+		sabItemLabel.append(hideSabItems);
+		
+		var Tff = $("<input type=\"checkbox\" checked>");
+		Tff.bind("change" , hideColumn.bind( Tff , "TffTD"));
+		var TffLabel = $("<label>Tff:</label>");
+		TffLabel.append(Tff);
+		
+		var Casualties = $("<input type=\"checkbox\" checked>");
+		Casualties.bind("change" , hideColumn.bind( Casualties , "CasualtiesTD"));
+		var CasualtiesLabel = $("<label>Casualties/attack:</label>");
+		CasualtiesLabel.append(Casualties);
+		
+		var Mercs = $("<input type=\"checkbox\" checked>");
+		Mercs.bind("change" , hideColumn.bind( Mercs , "MercsTD"));
+		var MercsLabel = $("<label>	Mercs:</label>");
+		MercsLabel.append(Mercs);
+		
+		var Defense = $("<input type=\"checkbox\" checked>");
+		Defense.bind("change" , hideColumn.bind( Defense , "DefenseTD"));
+		var DefenseLabel = $("<label>Defense:</label>");
+		DefenseLabel.append(Defense);
+		
+		var Sentry = $("<input type=\"checkbox\" checked>");
+		Sentry.bind("change" , hideColumn.bind( Sentry , "SentryTD"));
+		var SentryLabel = $("<label>Sentry:</label>");
+		SentryLabel.append(Sentry);
+		
+		var Sov = $("<input type=\"checkbox\" checked>");
+		Sov.bind("change" , hideColumn.bind( Sov , "SovTD"));
+		var SovLabel = $("<label>Sov:</label>");
+		SovLabel.append(Sov);
+		
+		var Strike = $("<input type=\"checkbox\" >");
+		Strike.bind("change" , hideColumn.bind( Strike , "StrikeTD"));
+		var StrikeLabel = $("<label>Strike:</label>");
+		StrikeLabel.append(Strike);
+		
+		var Spy = $("<input type=\"checkbox\" >");
+		Spy.bind("change" , hideColumn.bind( Spy , "SpyTD"));
+		var SpyLabel = $("<label>Spy:</label>");
+		SpyLabel.append(Spy);
+		
+		controlDiv.append(sabItemLabel);
+		controlDiv.append(TffLabel);
+		controlDiv.append(CasualtiesLabel);
+		controlDiv.append(MercsLabel);
+		controlDiv.append(DefenseLabel);
+		controlDiv.append(SentryLabel);
+		controlDiv.append(SovLabel);
+		controlDiv.append(StrikeLabel);
+		controlDiv.append(SpyLabel);
+		return controlDiv.get(0);
+	}
 
+	function hideColumn(type){
+		var status = this.get(0).checked ;
+		if(!status){
+			$("."+type).addClass("displayNone");
+		}else{
+			$("."+type).removeClass("displayNone");
+		}
+	}
+	
 	function loadSabList(){
-		var lolcontent = document.getElementById("lolcontent");
+		var lolcontent = document.getElementById("lolcontent");	
+		var controlBox = createControlBox();
 		var sabTable = document.createElement("table");
 		sabTable.setAttribute("width", "100%");
 		sabTable.setAttribute("cellspacing", "0");
@@ -764,7 +840,7 @@
 		var headerTr = document.createElement("tr");
 		var headerTd = document.createElement("td");
 		headerTd.innerHTML = "APPROVED SAB LIST";
-		headerTd.setAttribute("colspan", "9");
+		headerTd.setAttribute("colspan", "10");
 		headerTd.setAttribute("class", "th topcap");
 		headerTr.appendChild(headerTd);
 		sabTable.appendChild(headerTr);
@@ -776,15 +852,14 @@
 		noteTd.innerHTML = "<b>Sab items</b>";
 		var tffTd = document.createElement("td");
 		tffTd.innerHTML = "<b>Tff</b>";
-
 		var bfTd = document.createElement("td");
 		bfTd.innerHTML = "<b>Casualties/attack</b>";
-
 		var tctmTd = document.createElement("td");
 		tctmTd.innerHTML = "<b>Mercs/Coverts</b>";
-
 		var seTd = document.createElement("td");
 		seTd.innerHTML = "<b>Sentry</b>";
+		var sovTd = document.createElement("td");
+		sovTd.innerHTML = "<b>Sov</b>";
 		var daTd = document.createElement("td");
 		daTd.innerHTML = "<b>Defense</b>";
 		var saTd = document.createElement("td");
@@ -797,7 +872,7 @@
 		seTd.setAttribute("style" , "cursor:pointer");
 		saTd.setAttribute("style" , "cursor:pointer");
 		spTd.setAttribute("style" , "cursor:pointer");
-
+		sovTd.setAttribute("style" , "cursor:pointer");
 
 
 		tffTd.addEventListener("click", reloadSablist.bind(tffTd, "Tff"));
@@ -805,7 +880,18 @@
 		seTd.addEventListener("click", reloadSablist.bind(seTd, "Se"));
 		saTd.addEventListener("click", reloadSablist.bind(saTd, "Sa"));
 		spTd.addEventListener("click", reloadSablist.bind(spTd, "Sp"));
-
+		sovTd.addEventListener("click", reloadSablist.bind(spTd, "Sov"));
+		
+		noteTd.className += " sabItemsTD";
+		tffTd.className += " TffTD";
+		bfTd.className += " CasualtiesTD";
+		tctmTd.className += " MercsTD";
+		daTd.className += " DefenseTD";
+		seTd.className += " SentryTD";
+		sovTd.className += " SovTD";
+		saTd.className += " StrikeTD";
+		spTd.className += " SpyTD";
+		
 		listTr.appendChild(nameTd);
 		listTr.appendChild(noteTd);
 		listTr.appendChild(tffTd);
@@ -813,20 +899,24 @@
 		listTr.appendChild(tctmTd);
 		listTr.appendChild(daTd);
 		listTr.appendChild(seTd);
+		listTr.appendChild(sovTd);
 		listTr.appendChild(saTd);
 		listTr.appendChild(spTd);
 		sabTable.appendChild(listTr);
 
 		var counter = 0;
+		
 
 		for (var index = 0; index < sabListArr.length; index++) {
+			
 			userObj = sabListArr[index];
-
-
 			var tr = document.createElement("tr");
 
 			var tdName = document.createElement("td");
-			tdName.innerHTML = '<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=recon" target="_blank">'+userObj.Name+'</a>';
+			tdName.innerHTML = '<a href="https://ruinsofchaos.com/stats.php?id='+userObj.ExternalID+'"target="_blank">'+userObj.Name+'</a><br>';
+			tdName.innerHTML +='<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=recon"target="_blank">RECON</a>';
+			tdName.innerHTML +='<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=probe"target="_blank">&nbsp&nbsp&nbspPROBE</a>';
+			
 
 			var tdNote = document.createElement("td");
 			tdNote.innerHTML = getSabLinks(userObj.Note , userObj.Name);
@@ -847,35 +937,79 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
-			var banzai = userObj.BattleForce * .03;
-			var regular = userObj.BattleForce * .015;
-
 			
+			var soldierCas = userObj.BattleForce * .03;
 
 			var tdTctm = document.createElement("td");
-			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs + "<br>" + "Coverts: " + userObj.TotalCoverts;
+			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs.toLocaleString() + "<br>" + "Coverts: " + userObj.TotalCoverts.toLocaleString();
 
-
+			var tdSov = document.createElement("td");
+			tdSov.innerHTML = userObj.Sov.toLocaleString();
+			
 			if (userObj.IsHolding == "yes"){
-				banzai *= 0.5;
-				regular *= 0.5;
+
+			  soldierCas *= .5;
 			}
 
 			if (userObj.IsTrained == "yes"){
-				banzai *= 0.5;
-				regular *= 0.5;
+				soldierCas *= .5;
 			}
 
-			banzai = Math.round(banzai);
-			regular = Math.round(regular);
-
+			
+			soldierCas = Math.round(soldierCas);
+			
+			var massers = 1;
 			
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
 			
-			tdBf.innerHTML = "Banzai: " + banzai.toLocaleString() + "<br>" + "No event: " + regular.toLocaleString();
-
+			var saDaRatio = (parseInt(replaceAll(userStats.Sa , "," , ""))/userObj.Da);
+			if (saDaRatio > 10){
+				saDaRatio = 10;
+			}
+			var spyCas = (userObj.Spies*.0002)*(Math.floor(saDaRatio));
+			var sentryCas = (userObj.Sentries*.0002)*(Math.floor(saDaRatio));
+			
+			if (userObj.SpyIsHolding == "no"){
+				spyCas *= 2;
+			}
+			if (userObj.SentryIsHolding == "no"){
+				sentryCas *= 2;
+			}
+			
+			
+			var covertCasualties = Math.round(spyCas + sentryCas);
+			tdBf.innerHTML = "Soldiers: " + soldierCas.toLocaleString() + "<br>" + "Coverts: " + covertCasualties.toLocaleString();
+			
+			if(soldierCas*10 > userObj.TotalMercs/massers || covertCasualties > 2500){
+				if (counter % 2 == 0) {
+					tdBf.setAttribute("class", "masseven");
+				} else {
+					tdBf.setAttribute("class", "massodd");
+				}
+			}
+			
+			var userSpy = parseInt(replaceAll(userStats.Sp , "," , ""))
+			
+			if(userObj.Se / userSpy < 0.5 && userObj.Se != -1 ){
+				if (counter % 2 == 0) {
+					tdSE.setAttribute("class", "sabeven");
+				} else {
+					tdSE.setAttribute("class", "sabodd");
+				}
+			}
+						
+			tdNote.className += " sabItemsTD";
+			tdTFF.className += " TffTD";
+			tdBf.className += " CasualtiesTD";
+			tdTctm.className += " MercsTD";
+			tdDA.className += " DefenseTD";
+			tdSE.className += " SentryTD";
+			tdSov.className += " SovTD";
+			tdSA.className += " StrikeTD";
+			tdSP.className += " SpyTD";
+			
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
 			tr.appendChild(tdTFF);
@@ -883,29 +1017,62 @@
 			tr.appendChild(tdTctm);
 			tr.appendChild(tdDA);
 			tr.appendChild(tdSE);
+			tr.appendChild(tdSov);
 			tr.appendChild(tdSA);
 			tr.appendChild(tdSP);
 
 			if (counter % 2 == 0) {
-				if(banzai*5 > userObj.TotalMercs){
-					tr.setAttribute("class", "even sabentry banzaientryeven");
-				}else{
-					tr.setAttribute("class", "even sabentry");
-				}
+				tr.setAttribute("class", "even sabentry");
 			} else {
-				if(banzai*5 > userObj.TotalMercs){
-					tr.setAttribute("class", "odd sabentry banzaientryodd");
-				}else{
-					tr.setAttribute("class", "odd sabentry");
-				}
+				tr.setAttribute("class", "odd sabentry");
 			}
+			
 			sabTable.appendChild(tr);
 			counter++;
 
 		}
 		lolcontent.innerHTML = "";
+		lolcontent.appendChild(controlBox);
 		lolcontent.appendChild(sabTable);
+		
+		$(".StrikeTD").addClass("displayNone");
+		$(".SpyTD").addClass("displayNone");
 
+	}
+	
+	function getUserStats(){
+		
+		var tables = $(".sep.f");
+		var index = -1;
+		for ( var i = 0 ; i < tables.length ; i++ ){
+			var th = $(".sep.f").eq(i).find("tr").eq(0).find("th").eq(0).html();
+			if( th === "Your Stats"){
+				index = i;
+				break;
+			}
+		}
+
+		var sa = $(".sep.f").eq(index).find("tr").eq(1).find("td").eq(1).html();
+		var da = $(".sep.f").eq(index).find("tr").eq(2).find("td").eq(1).html();
+		var sp = $(".sep.f").eq(index).find("tr").eq(3).find("td").eq(1).html();
+		var se = $(".sep.f").eq(index).find("tr").eq(4).find("td").eq(1).html();
+	
+		
+		GM_xmlhttpRequest({
+			method: "POST",
+			headers: {
+				'Content-type': 'application/x-www-form-urlencoded'
+			},
+			data: encodeURI("external_id="+ BB_statid + "&sa=" + sa + "&da=" + da + "&sp=" + sp + "&se=" + se ),
+
+			url: bbScriptServer + "/roc/storeuserstats",
+
+			onload: function (r) {
+				//Do nothing
+			}
+		});
+
+		console.log("after storeUserStats request");
 	}
 
 	function reloadSablist(type){
