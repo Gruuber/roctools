@@ -6,7 +6,7 @@
 // @exclude     https://*ruinsofchaos.com/index.php*
 // @exclude     https://*ruinsofchaos.com/register.php*
 // @exclude     https://*ruinsofchaos.com/forgotpass.php*
-// @version     1.09.01
+// @version     1.09.02
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -992,7 +992,7 @@
 			
 			var userSpy = parseInt(replaceAll(userStats.Sp , "," , ""))
 			
-			if(userObj.Se / userSpy < 0.5 && userObj.Se != -1 ){
+			if(userObj.Se / userSpy < 2 && userObj.Se != -1 ){
 				if (counter % 2 == 0) {
 					tdSE.setAttribute("class", "sabeven");
 				} else {
