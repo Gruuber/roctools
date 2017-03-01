@@ -34,6 +34,8 @@ func main() {
 	r.HandleFunc("/roc/getplayerpage", getplayerpage).Methods("POST")
 	r.HandleFunc("/roc/updateNote", updateNote).Methods("POST")
 	r.HandleFunc("/roc/getsablist", getsablist).Methods("POST")
+	r.HandleFunc("/roc/storeuserstats", storeuserstats).Methods("POST")
+	r.HandleFunc("/roc/getuserstats", getUserStats).Methods("POST")
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -281,6 +283,8 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 
 		preWeaponStr, err := getLastSOV(playerID)
 		var defenseQuantity int
+		var sentryQuantity int
+		var spyQuantity int
 		if err == nil {
 			//We combine the 2 sells
 			preWBody := []byte(preWeaponStr)
@@ -309,6 +313,12 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 							if elem.Type == "Defense" {
 								defenseQuantity += elem.Quantity
 							}
+							if elem.Type == "Sentry" {
+								sentryQuantity += elem.Quantity
+							}
+							if elem.Type == "Spy" {
+								spyQuantity += elem.Quantity
+							}
 							break
 						}
 					}
@@ -327,6 +337,8 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 		//Now we calculate the player "battle force"
 		var isTrained string
 		var isHolding string
+		var spyIsHolding string
+		var sentryIsHolding string
 		var untrained int
 		var battleForce int
 		pAttackSoldiers, pAttackMercs, pDefenseSoldiers, pDefenseMercs, pUntrainedSoldiers, pUntrainedMercs, pSpies, pSentries, err := getLastTroops(playerID)
@@ -389,7 +401,19 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 				isHolding = "yes"
 			}
 
-			err = saveTroops(playerID, battleForce, isTrained, isHolding, elem.AttackSoldiers, elem.AttackMercs, elem.DefenseSoldiers, elem.DefenseMercs, elem.UntrainedSoldiers, elem.UntrainedMercs, elem.Spies, elem.Sentries)
+			if elem.Spies/2 > spyQuantity {
+				spyIsHolding = "no"
+			} else {
+				spyIsHolding = "yes"
+			}
+
+			if elem.Sentries/2 > sentryQuantity {
+				sentryIsHolding = "no"
+			} else {
+				sentryIsHolding = "yes"
+			}
+
+			err = saveTroops(playerID, battleForce, isTrained, isHolding, elem.AttackSoldiers, elem.AttackMercs, elem.DefenseSoldiers, elem.DefenseMercs, elem.UntrainedSoldiers, elem.UntrainedMercs, elem.Spies, elem.Sentries, spyIsHolding, sentryIsHolding)
 		}
 
 		//
@@ -506,9 +530,9 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func storeUserStats(w http.ResponseWriter, r *http.Request) {
+func storeuserstats(w http.ResponseWriter, r *http.Request) {
 	println("in storeUserStats")
-	/*r.ParseForm()
+	r.ParseForm()
 
 	var externalID = r.Form["external_id"][0]
 	if externalID == "" {
@@ -549,7 +573,7 @@ func storeUserStats(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	}*/
+	}
 }
 
 func getplayerpage(w http.ResponseWriter, r *http.Request) {
@@ -1023,19 +1047,19 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 	return nil
 }
 
-func saveTroops(playerID int, troops int, isTrained string, holding string, attackSoldiers int, attackMercs int, defenseSoldiers int, defenseMercs int, untrainedSoldiers int, untrainedMercs int, spies int, sentries int) error {
+func saveTroops(playerID int, troops int, isTrained string, holding string, attackSoldiers int, attackMercs int, defenseSoldiers int, defenseMercs int, untrainedSoldiers int, untrainedMercs int, spies int, sentries int, spyIsHolding string, sentryIsHolding string) error {
 	db = getDBconnection()
 	defer db.Close()
 	println("before prepare")
 	println(attackSoldiers)
 	println(attackMercs)
-	stmt, err := db.Prepare("insert into troops (player_id , value , isTrained, isHolding, attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, date) values ( (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , NOW() )")
+	stmt, err := db.Prepare("insert into troops (player_id , value , isTrained, isHolding, attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, spyIsHolding, sentryIsHolding, date) values ( (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , NOW() )")
 	defer stmt.Close()
 	if err != nil {
 
 		return err
 	}
-	res, err := stmt.Exec(playerID, troops, isTrained, holding, int(attackSoldiers), attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries)
+	res, err := stmt.Exec(playerID, troops, isTrained, holding, attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, spyIsHolding, sentryIsHolding)
 	if err != nil {
 
 		return err
@@ -1191,7 +1215,7 @@ func allSabList() *[]model.Player {
 		err = rows.Scan(&count)
 	}
 
-	rows, err = db.Query("select players.external_player_id ,  players.name  ,  players.note , COALESCE( stats.sa , \"???\") , COALESCE( stats.da , \"???\") , COALESCE( stats.sp,\"???\") , COALESCE( stats.se , \"???\") , COALESCE( players.tff , \"0\") ,  troops.value , troops.isHolding , troops.isTrained , troops.untrainedMercs , troops.defenseMercs , troops.spies , troops.sentries  from  players left outer join  stats on  players.stat_id =  stats.id left outer join  troops on  players.troop_id =  troops.id  where note like \"sab: %\" group by  players.id")
+	rows, err = db.Query("select players.external_player_id ,  players.name  ,  players.note , COALESCE( stats.sa , \"???\") , COALESCE( stats.da , \"???\") , COALESCE( stats.sp,\"???\") , COALESCE( stats.se , \"???\") , COALESCE( players.tff , \"0\") ,  troops.value , troops.isHolding , troops.isTrained , troops.untrainedMercs , troops.defenseMercs , troops.spies , troops.sentries, troops.spyIsHolding, troops.sentryIsHolding  from  players left outer join  stats on  players.stat_id =  stats.id left outer join  troops on  players.troop_id =  troops.id  where note like \"sab: %\" group by  players.id")
 	defer rows.Close()
 	if err != nil {
 		panic(err.Error())
@@ -1210,6 +1234,8 @@ func allSabList() *[]model.Player {
 		var sp string
 		var se string
 		var tff string
+		var spyIsHolding string
+		var sentryIsHolding string
 		var isHolding string
 		var isTrained string
 		var untrainedMercs int
@@ -1219,7 +1245,7 @@ func allSabList() *[]model.Player {
 		var totalMercs int
 		var totalCoverts int
 
-		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff, &battleForce, &isHolding, &isTrained, &untrainedMercs, &defenseMercs, &spies, &sentries)
+		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff, &battleForce, &isHolding, &isTrained, &untrainedMercs, &defenseMercs, &spies, &sentries, &spyIsHolding, &sentryIsHolding)
 
 		totalMercs = untrainedMercs + defenseMercs
 		totalCoverts = spies + sentries
@@ -1228,9 +1254,82 @@ func allSabList() *[]model.Player {
 			isTrained = "No Data"
 		}
 
-		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff, BattleForce: battleForce, IsHolding: isHolding, IsTrained: isTrained, TotalMercs: totalMercs, TotalCoverts: totalCoverts}
+		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff, BattleForce: battleForce, IsHolding: isHolding, IsTrained: isTrained, TotalMercs: totalMercs, TotalCoverts: totalCoverts, SpyIsHolding: spyIsHolding, SentryIsHolding: sentryIsHolding, Spies: spies, Sentries: sentries}
 		counter++
 
 	}
 	return &playerEntries
+}
+
+func getUserStats(w http.ResponseWriter, r *http.Request) {
+
+	r.ParseForm()
+
+	var externalID = r.Form["external_id"][0]
+	if externalID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
+		return
+	}
+
+	session, err := store.Get(r, "session-"+externalID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if session.IsNew == true {
+		//No session, return an error;
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "Please log in")
+		return
+	}
+
+	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
+
+		db = getDBconnection()
+		//Close database connection at the end
+		defer db.Close()
+		stmt, err := db.Prepare("select sa , da , sp , se from  players left outer join  stats on  players.stat_id =  stats.id where external_player_id = (?)")
+		//stmt, err := db.Prepare("select COALESCE( stats.sa , \"???\") , COALESCE( stats.da , \"???\") , COALESCE( stats.sp,\"???\") , COALESCE( stats.se , \"???\")  from  players left outer join  stats on  players.stat_id =  stats.id where external_player_id = (?)")
+		if err != nil {
+
+			panic(err.Error())
+		}
+		defer stmt.Close()
+
+		row, err := stmt.Query(externalID)
+		defer row.Close()
+
+		var sa string
+		var da string
+		var sp string
+		var se string
+
+		if row.Next() {
+			err = row.Scan(&sa, &da, &sp, &se)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		println(sa + "satest")
+		println(da + "datest")
+		println(sp + "sptest")
+		println(se + "setest")
+
+		userStats := model.User{Sa: sa, Da: da, Sp: sp, Se: se}
+		js, err := json.Marshal(userStats)
+		if err != nil {
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You are not authorized to perform this action")
+		return
+	}
+
 }

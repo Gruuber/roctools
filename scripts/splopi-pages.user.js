@@ -50,6 +50,8 @@
 	var url = document.location.toString();
 
 	var sabListArr = [];
+	var userStats = [];
+	
 
 	var BB_username = GM_getValue("BB_username", "");
 	var BB_password = GM_getValue("BB_password", "");
@@ -115,6 +117,24 @@
 	function getSabList(){
 		var lolcontent = document.getElementById("lolcontent");
 		lolcontent.innerHTML = "GETTING WAR DATA!!!!";
+		
+				GM_xmlhttpRequest({
+
+			method: "POST",
+			headers: {
+				'Content-type': 'application/x-www-form-urlencoded'
+			},
+			data: encodeURI("external_id=" + BB_statid),
+			url: bbScriptServer + "/roc/getuserstats",
+			onload: function (r) {
+				if (r.status == 200) {
+
+					  userStats = JSON.parse(r.responseText);
+			
+
+				}
+			}
+		});
 
 		GM_xmlhttpRequest({
 
@@ -140,6 +160,8 @@
 				}
 			}
 		});
+		
+
 
 	}
 
@@ -821,15 +843,23 @@
 		sabTable.appendChild(listTr);
 
 		var counter = 0;
+		
 
 		for (var index = 0; index < sabListArr.length; index++) {
+			
 			userObj = sabListArr[index];
+			console.log(parseInt(replaceAll(userStats.Sa , "," , "")));
+			
+			
 
 
 			var tr = document.createElement("tr");
 
 			var tdName = document.createElement("td");
-			tdName.innerHTML = '<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=recon" target="_blank">'+userObj.Name+'</a>';
+			tdName.innerHTML = '<a href="https://ruinsofchaos.com/stats.php?id='+userObj.ExternalID+'"target="_blank">'+userObj.Name+'</a><br>';
+			tdName.innerHTML +='<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=recon"target="_blank">RECON</a>';
+			tdName.innerHTML +='<a href="https://ruinsofchaos.com/attack.php?id='+userObj.ExternalID+'&mission_type=probe"target="_blank">&nbsp&nbsp&nbspPROBE</a>';
+			
 
 			var tdNote = document.createElement("td");
 			tdNote.innerHTML = getSabLinks(userObj.Note , userObj.Name);
@@ -850,40 +880,60 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
-			var banzai = userObj.BattleForce * .03;
-			var regular = userObj.BattleForce * .015;
+
+			var soldierCas = userObj.BattleForce * .03;
+
 
 			
 
 			var tdTctm = document.createElement("td");
-			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs + "<br>" + "Coverts: " + userObj.TotalCoverts;
+			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs.toLocaleString() + "<br>" + "Coverts: " + userObj.TotalCoverts.toLocaleString();
 
 
 			if (userObj.IsHolding == "yes"){
-				banzai *= 0.5;
-				regular *= 0.5;
+
+			  soldierCas *= .5;
 			}
 
 			if (userObj.IsTrained == "yes"){
-				banzai *= 0.5;
-				regular *= 0.5;
+				soldierCas *= .5;
 			}
 
-			banzai = Math.round(banzai);
-			regular = Math.round(regular);
+			
+			soldierCas = Math.round(soldierCas);
 			
 			var massers = 1;
-			
-			if(banzai*5 > userObj.TotalMercs){
-				tr.setAttribute("style","background-color:#ff6666");
-			}
 
 			
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
 			}
-
-			tdBf.innerHTML = "Banzai: " + banzai.toLocaleString() + "<br>" + "No event: " + regular.toLocaleString();
+			
+			var saDaRatio = (parseInt(replaceAll(userStats.Sa , "," , ""))/userObj.Da);
+			if (saDaRatio > 10){
+				saDaRatio = 10;
+			}
+			var spyCas = (userObj.Spies*.0002)*(Math.floor(saDaRatio));
+			var sentryCas = (userObj.Sentries*.0002)*(Math.floor(saDaRatio));
+			
+			if (userObj.SpyIsHolding == "no"){
+				spyCas *= 2;
+			}
+			if (userObj.SentryIsHolding == "no"){
+				sentryCas *= 2;
+			}
+			
+			
+			var covertCasualties = Math.round(spyCas + sentryCas);
+			tdBf.innerHTML = "Soldiers: " + soldierCas.toLocaleString() + "<br>" + "Coverts: " + covertCasualties.toLocaleString();
+			
+			if(soldierCas*10 > userObj.TotalMercs/massers || covertCasualties > 2500){
+				tdBf.setAttribute("style","background-color:#ff6666");
+			}
+			if((parseInt(replaceAll(userStats.Sp , "," , "")))*1.2 / userObj.Se > .5){
+			
+				tdSE.setAttribute("style","background-color:#33cc33");
+			}
 
 			tr.appendChild(tdName);
 			tr.appendChild(tdNote);
@@ -939,7 +989,9 @@
 				'Content-type': 'application/x-www-form-urlencoded'
 			},
 			data: encodeURI("external_id="+ BB_statid + "&sa=" + sa + "&da=" + da + "&sp=" + sp + "&se=" + se ),
-			url: bbScriptServer + "/roc/storeUserStats",
+
+			url: bbScriptServer + "/roc/storeuserstats",
+
 			onload: function (r) {
 				//Do nothing
 			}
@@ -964,3 +1016,5 @@
 	}
 
 })()
+
+
