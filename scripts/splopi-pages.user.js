@@ -2,11 +2,11 @@
 // @name        SPLoP's little helper
 // @namespace   roc.splopi.beaver
 // @description SPLoP's little helper, the better name by Jellybean
-// @include     https://ruinsofchaos.com/*
-// @exclude     https://ruinsofchaos.com/index.php*
-// @exclude     https://ruinsofchaos.com/register.php*
-// @exclude     https://ruinsofchaos.com/forgotpass.php*
-// @version     1.07.2
+// @include     https://*ruinsofchaos.com/*
+// @exclude     https://*ruinsofchaos.com/index.php*
+// @exclude     https://*ruinsofchaos.com/register.php*
+// @exclude     https://*ruinsofchaos.com/forgotpass.php*
+// @version     1.08.03
 // @grant 		  GM_xmlhttpRequest
 // @grant 		  GM_setValue
 // @grant 		  GM_getValue
@@ -43,8 +43,8 @@
 		addMenuPages();
 	}
 
-	//var bbScriptServer = "http://52.10.254.235:8080";
-	var bbScriptServer = "http://127.0.0.1:8080";
+	var bbScriptServer = "http://52.10.254.235:8080";
+	//var bbScriptServer = "http://127.0.0.1:8080";
 
 	var scriptName = "SPLoP's little helper";
 	var url = document.location.toString();
@@ -75,8 +75,8 @@
 	//Check if user is logged in before loading the scripts
 	loadBBPage();
 
-	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; }");
-
+	GM_addStyle(".sabentry:hover { background-color: #444444; } .sabentry > td { padding : 3px 0; } .sabentry > td:nth-child(1) { padding-left : 5px; } .banzaientryeven{background : #401818}    .banzaientryodd{background : #311010}");
+	
 	function addMenuPages() {
 		var bbMenu = $("<a class=\"bbMenu\" alt=\"SPLoP's little helper\" href=\"base.php?bbpage=profile\"><span>VERY UGLY BUTTON</span></a>");
 		var intelMenu = $("#menubar .menu7");
@@ -880,11 +880,8 @@
 			tdSP.innerHTML = userObj.Sp === -1 ? "???" : userObj.Sp.toLocaleString() ;
 
 			var tdBf = document.createElement("td");
-
-			var soldierCas = userObj.BattleForce * .03;
-
-
 			
+			var soldierCas = userObj.BattleForce * .03;
 
 			var tdTctm = document.createElement("td");
 			tdTctm.innerHTML = "Mercs: " + userObj.TotalMercs.toLocaleString() + "<br>" + "Coverts: " + userObj.TotalCoverts.toLocaleString();
@@ -903,7 +900,6 @@
 			soldierCas = Math.round(soldierCas);
 			
 			var massers = 1;
-
 			
 			if (userObj.IsHolding == "No Data" || userObj.IsTrained == "No Data"){
 				tdBf.innerHTML = "Need Recon";
@@ -945,12 +941,18 @@
 			tr.appendChild(tdSA);
 			tr.appendChild(tdSP);
 
-
-
 			if (counter % 2 == 0) {
-				tr.setAttribute("class", "even sabentry");
+				if(banzai*5 > userObj.TotalMercs){
+					tr.setAttribute("class", "even sabentry banzaientryeven");
+				}else{
+					tr.setAttribute("class", "even sabentry");
+				}
 			} else {
-				tr.setAttribute("class", "odd sabentry");
+				if(banzai*5 > userObj.TotalMercs){
+					tr.setAttribute("class", "odd sabentry banzaientryodd");
+				}else{
+					tr.setAttribute("class", "odd sabentry");
+				}
 			}
 			sabTable.appendChild(tr);
 			counter++;

@@ -42,7 +42,6 @@ func main() {
 
 // [START func_sign]
 func sign(w http.ResponseWriter, r *http.Request) {
-	println("Reach signin")
 	db = getDBconnection()
 	//Close database connection at the end
 	defer db.Close()
@@ -517,21 +516,16 @@ func storesov(w http.ResponseWriter, r *http.Request) {
 		err = saveSOV(playerID, sov, weapons)
 
 		if err != nil {
-			println("test")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		fmt.Fprint(w, "SUCCESS")
-
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "You are not authorized to perform this action")
 		return
 	}
 }
 
 func storeuserstats(w http.ResponseWriter, r *http.Request) {
-	println("in storeUserStats")
 	r.ParseForm()
 
 	var externalID = r.Form["external_id"][0]
@@ -562,7 +556,6 @@ func storeuserstats(w http.ResponseWriter, r *http.Request) {
 	if session.Values["typeID"] == 4 || session.Values["typeID"] == 3 {
 		playerID := getPlayerID(externalID)
 
-		println("before saveStats")
 		err = saveStats(playerID, sa, da, sp, se)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -817,7 +810,7 @@ func getAllNonAdminUsers() *[]model.UserEntry {
 }
 
 func getDBconnection() *sql.DB {
-	database, err := sql.Open("mysql", "Gruuber:jiggyph00@tcp(127.0.0.1:3306)/splop")
+	database, err := sql.Open("mysql", "gouser:hireme@tcp(127.0.0.1:3306)/splop")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -985,7 +978,6 @@ func getLastTroops(playerID int) (int, int, int, int, int, int, int, int, error)
 	if rows.Next() {
 		err = rows.Scan(&attackSoldiers, &attackMercs, &defenseSoldiers, &defenseMercs, &untrainedSoldiers, &untrainedMercs, &spies, &sentries)
 		if err != nil {
-			println("test")
 			log.Fatal(err)
 			return attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, err
 		}
@@ -1050,10 +1042,9 @@ func saveSOV(playerID int, sov int, w []model.Weapon) error {
 func saveTroops(playerID int, troops int, isTrained string, holding string, attackSoldiers int, attackMercs int, defenseSoldiers int, defenseMercs int, untrainedSoldiers int, untrainedMercs int, spies int, sentries int, spyIsHolding string, sentryIsHolding string) error {
 	db = getDBconnection()
 	defer db.Close()
-	println("before prepare")
-	println(attackSoldiers)
-	println(attackMercs)
+
 	stmt, err := db.Prepare("insert into troops (player_id , value , isTrained, isHolding, attackSoldiers, attackMercs, defenseSoldiers, defenseMercs, untrainedSoldiers, untrainedMercs, spies, sentries, spyIsHolding, sentryIsHolding, date) values ( (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , (?) , NOW() )")
+
 	defer stmt.Close()
 	if err != nil {
 
@@ -1215,7 +1206,7 @@ func allSabList() *[]model.Player {
 		err = rows.Scan(&count)
 	}
 
-	rows, err = db.Query("select players.external_player_id ,  players.name  ,  players.note , COALESCE( stats.sa , \"???\") , COALESCE( stats.da , \"???\") , COALESCE( stats.sp,\"???\") , COALESCE( stats.se , \"???\") , COALESCE( players.tff , \"0\") ,  troops.value , troops.isHolding , troops.isTrained , troops.untrainedMercs , troops.defenseMercs , troops.spies , troops.sentries, troops.spyIsHolding, troops.sentryIsHolding  from  players left outer join  stats on  players.stat_id =  stats.id left outer join  troops on  players.troop_id =  troops.id  where note like \"sab: %\" group by  players.id")
+	rows, err = db.Query("select players.external_player_id ,  players.name  ,  players.note , COALESCE( stats.sa , \"???\") , COALESCE( stats.da , \"???\") , COALESCE( stats.sp,\"???\") , COALESCE( stats.se , \"???\") , COALESCE( players.tff , \"0\") ,  COALESCE(troops.value,0) , COALESCE(troops.isHolding , \"\") , COALESCE(troops.isTrained , \"\") , COALESCE(troops.untrainedMercs , 0) , COALESCE(troops.defenseMercs,0) , COALESCE(troops.spies,0) , COALESCE(troops.sentries,0), COALESCE(troops.spyIsHolding,\"\"), COALESCE(troops.sentryIsHolding,\"\"), COALESCE(sovs.value, 0) as sov from  players left outer join  stats on  players.stat_id =  stats.id left outer join  troops on  players.troop_id =  troops.id left outer join sovs on players.sov_id = sovs.id where note like \"sab: %\" group by  players.id")
 	defer rows.Close()
 	if err != nil {
 		panic(err.Error())
@@ -1244,8 +1235,9 @@ func allSabList() *[]model.Player {
 		var sentries int
 		var totalMercs int
 		var totalCoverts int
+		var sov int64
 
-		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff, &battleForce, &isHolding, &isTrained, &untrainedMercs, &defenseMercs, &spies, &sentries, &spyIsHolding, &sentryIsHolding)
+		err = rows.Scan(&externalID, &name, &note, &sa, &da, &sp, &se, &tff, &battleForce, &isHolding, &isTrained, &untrainedMercs, &defenseMercs, &spies, &sentries, &spyIsHolding, &sentryIsHolding, &sov)
 
 		totalMercs = untrainedMercs + defenseMercs
 		totalCoverts = spies + sentries
@@ -1254,7 +1246,7 @@ func allSabList() *[]model.Player {
 			isTrained = "No Data"
 		}
 
-		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff, BattleForce: battleForce, IsHolding: isHolding, IsTrained: isTrained, TotalMercs: totalMercs, TotalCoverts: totalCoverts, SpyIsHolding: spyIsHolding, SentryIsHolding: sentryIsHolding, Spies: spies, Sentries: sentries}
+		playerEntries[counter] = model.Player{ExternalID: externalID, Name: name, Note: note, Sa: sa, Da: da, Se: se, Sp: sp, Tff: tff, BattleForce: battleForce, IsHolding: isHolding, IsTrained: isTrained, TotalMercs: totalMercs, TotalCoverts: totalCoverts, SpyIsHolding: spyIsHolding, SentryIsHolding: sentryIsHolding, Spies: spies, Sentries: sentries, Sov: sov}
 		counter++
 
 	}
@@ -1312,10 +1304,6 @@ func getUserStats(w http.ResponseWriter, r *http.Request) {
 				log.Fatal(err)
 			}
 		}
-		println(sa + "satest")
-		println(da + "datest")
-		println(sp + "sptest")
-		println(se + "setest")
 
 		userStats := model.User{Sa: sa, Da: da, Sp: sp, Se: se}
 		js, err := json.Marshal(userStats)
